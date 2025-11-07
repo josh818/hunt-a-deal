@@ -82,25 +82,8 @@ Deno.serve(async (req) => {
           return "/placeholder.svg";
         }
         
-        // Extract ASIN from Amazon URL (format: /dp/ASIN or /gp/product/ASIN)
-        const asinMatch = url.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
-        
-        if (index < 2) {
-          console.log(`URL: ${url}`);
-          console.log(`ASIN Match: ${asinMatch ? asinMatch[1] : 'none'}`);
-        }
-        
-        if (asinMatch && asinMatch[1]) {
-          // Use our image proxy to bypass Amazon's hotlinking protection
-          const amazonImageUrl = `https://m.media-amazon.com/images/I/${asinMatch[1]}.jpg`;
-          const proxyUrl = `${supabaseUrl}/functions/v1/image-proxy?url=${encodeURIComponent(amazonImageUrl)}`;
-          if (index < 2) {
-            console.log(`Generated proxy URL: ${proxyUrl.substring(0, 100)}`);
-          }
-          return proxyUrl;
-        }
-        
-        return "/placeholder.svg";
+        // Use image proxy to scrape the actual image from the Amazon product page
+        return `${supabaseUrl}/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
       };
 
       const price = parsePrice(item.price);
