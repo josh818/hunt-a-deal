@@ -26,10 +26,13 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
         <img 
           src={deal.imageUrl} 
           alt={deal.title}
+          loading="lazy"
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.src = '/placeholder.svg';
+            if (!target.src.includes('placeholder.svg')) {
+              target.src = '/placeholder.svg';
+            }
           }}
         />
         {savings && (
