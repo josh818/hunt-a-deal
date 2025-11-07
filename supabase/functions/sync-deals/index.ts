@@ -54,6 +54,15 @@ Deno.serve(async (req) => {
 
     const rawDeals = apiResponse.products;
 
+    // Check first few items for image data
+    console.log('Checking image data from API:');
+    rawDeals.slice(0, 3).forEach((deal, i) => {
+      console.log(`Deal ${i}: has image=${!!deal.image}, url=${deal.url?.substring(0, 50)}`);
+      if (deal.image) {
+        console.log(`  Image value: ${deal.image}`);
+      }
+    });
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -72,14 +81,22 @@ Deno.serve(async (req) => {
 
       // Extract ASIN from Amazon URL and build image URL
       const getImageUrl = (url?: string, providedImage?: string): string => {
-        if (providedImage) return providedImage;
-        if (!url) return "/placeholder.svg";
+        // Only use providedImage if it's a valid URL (not empty/null)
+        if (providedImage && providedImage.trim() && providedImage.startsWith('http')) {
+          return providedImage;
+        }
+        
+        if (!url) {
+          return "/placeholder.svg";
+        }
         
         // Extract ASIN from Amazon URL (format: /dp/ASIN or /gp/product/ASIN)
         const asinMatch = url.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
         if (asinMatch && asinMatch[1]) {
-          return `https://images-na.ssl-images-amazon.com/images/P/${asinMatch[1]}.01.LZZZZZZZ.jpg`;
+          // Try multiple Amazon image URL formats
+          return `https://m.media-amazon.com/images/I/${asinMatch[1]}.jpg`;
         }
+        
         return "/placeholder.svg";
       };
 
