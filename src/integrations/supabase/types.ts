@@ -22,7 +22,6 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
-          user_name: string
         }
         Insert: {
           content: string
@@ -31,7 +30,6 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
-          user_name: string
         }
         Update: {
           content?: string
@@ -40,7 +38,6 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
-          user_name?: string
         }
         Relationships: []
       }
@@ -98,6 +95,27 @@ export type Database = {
           review_count?: number | null
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          updated_at?: string
         }
         Relationships: []
       }

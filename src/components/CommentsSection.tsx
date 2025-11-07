@@ -12,9 +12,11 @@ interface Comment {
   id: string;
   deal_id: string;
   user_id: string;
-  user_name: string;
   content: string;
   created_at: string;
+  profiles?: {
+    display_name: string;
+  };
 }
 
 interface CommentsSectionProps {
@@ -46,7 +48,12 @@ export const CommentsSection = ({ dealId }: CommentsSectionProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("comments")
-        .select("*")
+        .select(`
+          *,
+          profiles (
+            display_name
+          )
+        `)
         .eq("deal_id", dealId)
         .order("created_at", { ascending: false });
 
@@ -62,7 +69,6 @@ export const CommentsSection = ({ dealId }: CommentsSectionProps) => {
       const { error } = await supabase.from("comments").insert({
         deal_id: dealId,
         user_id: user.id,
-        user_name: user.email?.split("@")[0] || "Anonymous",
         content,
       });
 
@@ -156,7 +162,9 @@ export const CommentsSection = ({ dealId }: CommentsSectionProps) => {
             <Card key={comment.id} className="p-4">
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <p className="font-semibold">{comment.user_name}</p>
+                  <p className="font-semibold">
+                    {comment.profiles?.display_name || "Anonymous User"}
+                  </p>
                   <p className="text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(comment.created_at), {
                       addSuffix: true,
