@@ -57,6 +57,11 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        "deal-badge": "hsl(var(--deal-badge))",
+        "deal-badge-foreground": "hsl(var(--deal-badge-foreground))",
+        "price-highlight": "hsl(var(--price-highlight))",
+        "savings-bg": "hsl(var(--savings-bg))",
+        "savings-text": "hsl(var(--savings-text))",
       },
       borderRadius: {
         lg: "var(--radius)",
