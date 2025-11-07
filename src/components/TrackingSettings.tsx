@@ -36,9 +36,9 @@ export const TrackingSettings = ({ trackingCode, onTrackingCodeChange }: Trackin
         <Card className="fixed bottom-24 right-6 w-80 p-4 shadow-xl z-50 animate-in slide-in-from-bottom-4">
           <div className="space-y-4">
             <div>
-              <h3 className="font-semibold mb-2">Amazon Tracking Code</h3>
+              <h3 className="font-semibold mb-2">Affiliate Tracking Code</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Update your Amazon affiliate tracking code to earn commissions
+                Update your affiliate tracking code to earn commissions
               </p>
             </div>
 

@@ -93,7 +93,7 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
             target="_blank" 
             rel="noopener noreferrer"
           >
-            View on Amazon
+            View Deal
             <ExternalLink className="ml-2 h-4 w-4" />
           </a>
         </Button>

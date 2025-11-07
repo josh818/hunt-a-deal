@@ -1,44 +1,49 @@
 import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { DealCard } from "@/components/DealCard";
 import { TrackingSettings } from "@/components/TrackingSettings";
 import { FilterBar, Filters } from "@/components/FilterBar";
 import { Deal } from "@/types/deal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, TrendingDown } from "lucide-react";
-
-const API_URL = "https://cbk3yym2o7ktq2x44qnfo5xnhe0hpwxt.lambda-url.us-east-1.on.aws/api/v1/deals";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, TrendingDown, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 const fetchDeals = async (): Promise<Deal[]> => {
-  const response = await fetch(API_URL);
-  if (!response.ok) {
-    throw new Error("Failed to fetch deals");
+  // Fetch deals from our database cache
+  const { data, error } = await supabase
+    .from('deals')
+    .select('*')
+    .order('fetched_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching deals:', error);
+    throw error;
   }
-  const data = await response.json();
-  
-  // Transform API response to Deal interface
-  // Adjust this based on actual API structure
-  return data.map((item: any, index: number) => ({
-    id: item.id || `deal-${index}`,
-    title: item.title || item.name || "Product",
+
+  // Transform database response to Deal interface
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    title: item.title,
     description: item.description,
-    price: parseFloat(item.price || item.currentPrice || 0),
-    originalPrice: item.originalPrice ? parseFloat(item.originalPrice) : undefined,
+    price: parseFloat(item.price),
+    originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
     discount: item.discount ? parseFloat(item.discount) : undefined,
-    imageUrl: item.imageUrl || item.image || "/placeholder.svg",
-    productUrl: item.productUrl || item.url || item.link || "",
+    imageUrl: item.image_url,
+    productUrl: item.product_url,
     category: item.category,
     rating: item.rating ? parseFloat(item.rating) : undefined,
-    reviewCount: item.reviewCount || item.reviews,
+    reviewCount: item.review_count,
     brand: item.brand,
-    inStock: item.inStock !== false,
+    inStock: item.in_stock,
   }));
 };
 
 const Deals = () => {
   const [trackingCode, setTrackingCode] = useState(() => {
-    return localStorage.getItem("amazonTrackingCode") || "your-tag-20";
+    return localStorage.getItem("affiliateTrackingCode") || "your-tag-20";
   });
 
   const [filters, setFilters] = useState<Filters>(() => {
@@ -53,14 +58,30 @@ const Deals = () => {
     };
   });
 
-  const { data: deals, isLoading, error } = useQuery({
+  const { data: deals, isLoading, error, refetch } = useQuery({
     queryKey: ["deals"],
     queryFn: fetchDeals,
-    refetchInterval: 300000, // Refetch every 5 minutes
+    refetchInterval: 60000, // Refetch every minute to check for new cached data
   });
 
+  const syncDeals = async () => {
+    try {
+      toast.loading("Refreshing deals from source...");
+      const { error } = await supabase.functions.invoke('sync-deals');
+      
+      if (error) throw error;
+      
+      // Refetch the deals from database after sync
+      await refetch();
+      toast.success("Deals refreshed successfully!");
+    } catch (error) {
+      console.error('Error syncing deals:', error);
+      toast.error("Failed to refresh deals");
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem("amazonTrackingCode", trackingCode);
+    localStorage.setItem("affiliateTrackingCode", trackingCode);
   }, [trackingCode]);
 
   useEffect(() => {
@@ -147,14 +168,20 @@ const Deals = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <TrendingDown className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-2xl font-bold">Amazon Deal Finder</h1>
-              <p className="text-sm text-muted-foreground">
-                Discover the hottest deals on Amazon
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <TrendingDown className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-2xl font-bold">Deal Finder</h1>
+                <p className="text-sm text-muted-foreground">
+                  Discover the hottest deals online
+                </p>
+              </div>
             </div>
+            <Button onClick={syncDeals} variant="outline" size="sm">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh Deals
+            </Button>
           </div>
         </div>
       </header>
