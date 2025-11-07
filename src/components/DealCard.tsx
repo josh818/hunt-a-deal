@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Star } from "lucide-react";
 import { Deal } from "@/types/deal";
+import { useNavigate } from "react-router-dom";
 
 interface DealCardProps {
   deal: Deal;
@@ -10,15 +11,10 @@ interface DealCardProps {
 }
 
 export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
+  const navigate = useNavigate();
   const savings = deal.originalPrice 
     ? ((deal.originalPrice - deal.price) / deal.originalPrice * 100).toFixed(0)
     : deal.discount;
-
-  const getAmazonUrl = () => {
-    const url = new URL(deal.productUrl);
-    url.searchParams.set('tag', trackingCode);
-    return url.toString();
-  };
 
   return (
     <Card className="group overflow-hidden transition-all hover:shadow-lg">
@@ -89,16 +85,10 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
 
         <Button 
           className="w-full" 
-          asChild
+          onClick={() => navigate(`/deal/${deal.id}`)}
         >
-          <a 
-            href={getAmazonUrl()} 
-            target="_blank" 
-            rel="noopener noreferrer"
-          >
-            View Deal
-            <ExternalLink className="ml-2 h-4 w-4" />
-          </a>
+          View Deal Details
+          <ExternalLink className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </Card>
