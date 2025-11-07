@@ -70,6 +70,19 @@ Deno.serve(async (req) => {
         return parseFloat(cleaned) || 0;
       };
 
+      // Extract ASIN from Amazon URL and build image URL
+      const getImageUrl = (url?: string, providedImage?: string): string => {
+        if (providedImage) return providedImage;
+        if (!url) return "/placeholder.svg";
+        
+        // Extract ASIN from Amazon URL (format: /dp/ASIN or /gp/product/ASIN)
+        const asinMatch = url.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
+        if (asinMatch && asinMatch[1]) {
+          return `https://images-na.ssl-images-amazon.com/images/P/${asinMatch[1]}.01.LZZZZZZZ.jpg`;
+        }
+        return "/placeholder.svg";
+      };
+
       const price = parsePrice(item.price);
       const originalPrice = parsePrice(item.original_price);
       const discount = originalPrice > 0 && price > 0 
@@ -83,7 +96,7 @@ Deno.serve(async (req) => {
         price: price,
         original_price: originalPrice > 0 ? originalPrice : null,
         discount: discount,
-        image_url: item.image || "/placeholder.svg",
+        image_url: getImageUrl(item.url, item.image),
         product_url: item.url || "",
         category: item.category || item.store || null,
         rating: item.rating ? parseFloat(String(item.rating)) : null,
