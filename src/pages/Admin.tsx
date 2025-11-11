@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 interface Project {
   id: string;
   name: string;
+  slug: string;
   tracking_code: string;
   description: string | null;
   created_at: string;
@@ -31,6 +32,7 @@ const Admin = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [newProject, setNewProject] = useState({
     name: "",
+    slug: "",
     tracking_code: "",
     description: "",
   });
@@ -102,6 +104,7 @@ const Admin = () => {
         .from('projects')
         .insert({
           name: project.name,
+          slug: project.slug,
           tracking_code: project.tracking_code,
           description: project.description || null,
           created_by: user.id,
@@ -115,7 +118,7 @@ const Admin = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setIsDialogOpen(false);
-      setNewProject({ name: "", tracking_code: "", description: "" });
+      setNewProject({ name: "", slug: "", tracking_code: "", description: "" });
       toast.success("Project created successfully!");
     },
     onError: (error: any) => {
@@ -202,6 +205,18 @@ const Admin = () => {
                   />
                 </div>
                 <div>
+                  <Label htmlFor="slug">URL Slug</Label>
+                  <Input
+                    id="slug"
+                    value={newProject.slug}
+                    onChange={(e) => setNewProject({ ...newProject, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
+                    placeholder="my-project"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Lowercase letters, numbers, and hyphens only (e.g., "my-project")
+                  </p>
+                </div>
+                <div>
                   <Label htmlFor="tracking_code">Amazon Tracking Code</Label>
                   <Input
                     id="tracking_code"
@@ -224,7 +239,7 @@ const Admin = () => {
                 </div>
                 <Button
                   onClick={() => createProject.mutate(newProject)}
-                  disabled={!newProject.name || !newProject.tracking_code || createProject.isPending}
+                  disabled={!newProject.name || !newProject.slug || !newProject.tracking_code || createProject.isPending}
                   className="w-full"
                 >
                   {createProject.isPending ? "Creating..." : "Create Project"}
@@ -260,8 +275,8 @@ const Admin = () => {
                 <TableBody>
                   {projects.map((project) => {
                     const stats = getProjectAnalytics(project.id);
-                    const dealsUrl = `${window.location.origin}/project/${project.id}/deals`;
-                    const socialUrl = `${window.location.origin}/project/${project.id}/social`;
+                    const dealsUrl = `${window.location.origin}/project/${project.slug}/deals`;
+                    const socialUrl = `${window.location.origin}/project/${project.slug}/social`;
 
                     return (
                       <TableRow key={project.id}>
@@ -319,7 +334,7 @@ const Admin = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => navigate(`/project/${project.id}/deals`)}
+                              onClick={() => navigate(`/project/${project.slug}/deals`)}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>

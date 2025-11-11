@@ -13,17 +13,17 @@ import { Deal } from "@/types/deal";
 import { replaceTrackingCode } from "@/utils/trackingCode";
 
 const ProjectSocial = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [socialPosts, setSocialPosts] = useState<Record<string, any>>({});
 
   const { data: project, isLoading: projectLoading } = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: ['project', slug],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .eq('id', projectId)
-        .single();
+        .eq('slug', slug)
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -31,7 +31,7 @@ const ProjectSocial = () => {
   });
 
   const { data: deals, isLoading: dealsLoading } = useQuery({
-    queryKey: ['project-deals-social', projectId],
+    queryKey: ['project-deals-social', slug],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('deals')
@@ -69,7 +69,7 @@ const ProjectSocial = () => {
 
     try {
       const trackedUrl = replaceTrackingCode(deal.productUrl, project.tracking_code);
-      const pageUrl = `${window.location.origin}/project/${projectId}/deals`;
+      const pageUrl = `${window.location.origin}/project/${slug}/deals`;
 
       const { data, error } = await supabase.functions.invoke('generate-social-post', {
         body: {

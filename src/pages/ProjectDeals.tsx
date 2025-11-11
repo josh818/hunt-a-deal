@@ -11,16 +11,16 @@ import { AlertCircle, TrendingDown } from "lucide-react";
 import { replaceTrackingCode } from "@/utils/trackingCode";
 
 const ProjectDeals = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { slug } = useParams<{ slug: string }>();
 
   const { data: project, isLoading: projectLoading } = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: ['project', slug],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .eq('id', projectId)
-        .single();
+        .eq('slug', slug)
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -28,7 +28,7 @@ const ProjectDeals = () => {
   });
 
   const { data: deals, isLoading: dealsLoading } = useQuery({
-    queryKey: ['project-deals', projectId],
+    queryKey: ['project-deals', slug],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('deals')
