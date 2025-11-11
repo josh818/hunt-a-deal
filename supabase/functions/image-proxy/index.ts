@@ -176,12 +176,13 @@ Deno.serve(async (req) => {
 
     if (!imageUrl) {
       console.error('Could not extract image URL from product page');
-      // Redirect to placeholder.svg instead
-      return new Response(null, {
-        status: 302,
+      // Return a simple placeholder SVG
+      const placeholderSvg = `<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="400" fill="#f0f0f0"/><text x="50%" y="50%" text-anchor="middle" fill="#999" font-size="16" font-family="Arial">Image not available</text></svg>`;
+      return new Response(placeholderSvg, {
+        status: 200,
         headers: {
           ...corsHeaders,
-          'Location': '/placeholder.svg',
+          'Content-Type': 'image/svg+xml',
           'Cache-Control': 'public, max-age=300',
         },
       });
@@ -221,12 +222,13 @@ Deno.serve(async (req) => {
       clearTimeout(timeoutId);
       console.error('Error fetching image:', error);
       
-      // Redirect to placeholder on error
-      return new Response(null, {
-        status: 302,
+      // Return placeholder SVG on error
+      const placeholderSvg = `<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg"><rect width="400" height="400" fill="#f0f0f0"/><text x="50%" y="50%" text-anchor="middle" fill="#999" font-size="16" font-family="Arial">Image not available</text></svg>`;
+      return new Response(placeholderSvg, {
+        status: 200,
         headers: {
           ...corsHeaders,
-          'Location': '/placeholder.svg',
+          'Content-Type': 'image/svg+xml',
           'Cache-Control': 'public, max-age=300',
         },
       });
