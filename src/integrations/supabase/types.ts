@@ -14,33 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      comments: {
-        Row: {
-          content: string
-          created_at: string
-          deal_id: string
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          deal_id: string
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          deal_id?: string
-          id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       deals: {
         Row: {
           brand: string | null
@@ -95,27 +68,6 @@ export type Database = {
           review_count?: number | null
           title?: string
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          created_at: string
-          display_name: string
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          display_name: string
-          id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          display_name?: string
-          id?: string
-          updated_at?: string
         }
         Relationships: []
       }

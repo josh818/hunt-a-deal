@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, Star, ArrowLeft } from "lucide-react";
-import { CommentsSection } from "@/components/CommentsSection";
 
 const fetchDeal = async (id: string): Promise<Deal | null> => {
   const { data, error } = await supabase
@@ -205,15 +204,12 @@ const DealLanding = () => {
               <Button size="lg" className="w-full text-lg py-6" disabled>
                 Out of Stock
               </Button>
-            )}
-          </div>
+          )}
         </div>
-
-        {/* Comments Section */}
-        <CommentsSection dealId={deal.id} />
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default DealLanding;
