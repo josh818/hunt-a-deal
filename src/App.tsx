@@ -10,6 +10,9 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Test12345SocialLinks from "./pages/Test12345SocialLinks";
 import SocialLinksGenerator from "./pages/SocialLinksGenerator";
+import Admin from "./pages/Admin";
+import ProjectDeals from "./pages/ProjectDeals";
+import ProjectSocial from "./pages/ProjectSocial";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +29,9 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/test12345/sociallinks" element={<Test12345SocialLinks />} />
           <Route path="/social-links-generator" element={<SocialLinksGenerator />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/project/:projectId/deals" element={<ProjectDeals />} />
+          <Route path="/project/:projectId/social" element={<ProjectSocial />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,75 +1,76 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Share2, Copy, CheckCircle, AlertCircle, Sparkles, Download } from "lucide-react";
+import { Share2, Copy, CheckCircle, AlertCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Deal } from "@/types/deal";
-import { replaceTrackingCode, getDefaultTrackingCode } from "@/utils/trackingCode";
+import { replaceTrackingCode } from "@/utils/trackingCode";
 
-const fetchDeals = async (): Promise<Deal[]> => {
-  const { data, error } = await supabase
-    .from('deals')
-    .select('*')
-    .order('fetched_at', { ascending: false })
-    .limit(20);
+const ProjectSocial = () => {
+  const { projectId } = useParams<{ projectId: string }>();
+  const [socialPosts, setSocialPosts] = useState<Record<string, any>>({});
 
-  if (error) throw error;
+  const { data: project, isLoading: projectLoading } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .single();
 
-  return (data || []).map((item: any) => ({
-    id: item.id,
-    title: item.title,
-    description: item.description,
-    price: parseFloat(item.price),
-    originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
-    discount: item.discount ? parseFloat(item.discount) : undefined,
-    imageUrl: item.image_url,
-    productUrl: item.product_url,
-    category: item.category,
-    rating: item.rating ? parseFloat(item.rating) : undefined,
-    reviewCount: item.review_count,
-    brand: item.brand,
-    inStock: item.in_stock,
-  }));
-};
+      if (error) throw error;
+      return data;
+    },
+  });
 
-interface SocialPost {
-  dealId: string;
-  text: string;
-  url: string;
-  isGenerating: boolean;
-  isCopied: boolean;
-}
+  const { data: deals, isLoading: dealsLoading } = useQuery({
+    queryKey: ['project-deals-social', projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deals')
+        .select('*')
+        .order('fetched_at', { ascending: false })
+        .limit(20);
 
-const SocialLinksGenerator = () => {
-  const [socialPosts, setSocialPosts] = useState<Record<string, SocialPost>>({});
-  const [isGeneratingBulk, setIsGeneratingBulk] = useState(false);
-  
-  const { data: deals, isLoading, error } = useQuery({
-    queryKey: ["deals-social-generator"],
-    queryFn: fetchDeals,
+      if (error) throw error;
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        price: parseFloat(item.price),
+        originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
+        discount: item.discount ? parseFloat(item.discount) : undefined,
+        imageUrl: item.image_url,
+        productUrl: item.product_url,
+        category: item.category,
+        rating: item.rating ? parseFloat(item.rating) : undefined,
+        reviewCount: item.review_count,
+        brand: item.brand,
+        inStock: item.in_stock,
+      }));
+    },
+    enabled: !!project,
   });
 
   const generateSocialPost = async (deal: Deal) => {
+    if (!project) return;
+
     setSocialPosts(prev => ({
       ...prev,
-      [deal.id]: {
-        dealId: deal.id,
-        text: '',
-        url: '',
-        isGenerating: true,
-        isCopied: false,
-      }
+      [deal.id]: { isGenerating: true }
     }));
 
     try {
-      const trackedUrl = replaceTrackingCode(deal.productUrl, getDefaultTrackingCode());
-      const pageUrl = `${window.location.origin}/test12345/sociallinks`;
-      
+      const trackedUrl = replaceTrackingCode(deal.productUrl, project.tracking_code);
+      const pageUrl = `${window.location.origin}/project/${projectId}/deals`;
+
       const { data, error } = await supabase.functions.invoke('generate-social-post', {
         body: {
           deal: {
@@ -90,7 +91,6 @@ const SocialLinksGenerator = () => {
       setSocialPosts(prev => ({
         ...prev,
         [deal.id]: {
-          dealId: deal.id,
           text: data.text,
           url: trackedUrl,
           isGenerating: false,
@@ -108,57 +108,6 @@ const SocialLinksGenerator = () => {
         return newPosts;
       });
     }
-  };
-
-  const generateBulkPosts = async () => {
-    if (!deals || deals.length === 0) return;
-    
-    setIsGeneratingBulk(true);
-    let generated = 0;
-
-    for (const deal of deals) {
-      if (socialPosts[deal.id]) continue; // Skip already generated
-      
-      await generateSocialPost(deal);
-      generated++;
-      
-      // Add small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    setIsGeneratingBulk(false);
-    toast.success(`Generated ${generated} social posts!`);
-  };
-
-  const exportToCSV = () => {
-    if (Object.keys(socialPosts).length === 0) {
-      toast.error("No posts to export");
-      return;
-    }
-
-    const csvContent = [
-      ['Deal Title', 'Social Post', 'Tracked URL'].join(','),
-      ...Object.entries(socialPosts).map(([dealId, post]) => {
-        const deal = deals?.find(d => d.id === dealId);
-        return [
-          `"${deal?.title || 'Unknown'}"`,
-          `"${post.text.replace(/"/g, '""')}"`,
-          `"${post.url}"`
-        ].join(',');
-      })
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `social-posts-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    toast.success("CSV exported successfully!");
   };
 
   const copyToClipboard = (dealId: string, text: string) => {
@@ -183,70 +132,58 @@ const SocialLinksGenerator = () => {
     }, 2000);
   };
 
+  if (projectLoading || dealsLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="container mx-auto px-4 py-8">
+          <Skeleton className="h-12 w-64 mb-8" />
+          <div className="space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full" />
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="container mx-auto px-4 py-8">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Project not found or you don't have access to it.
+            </AlertDescription>
+          </Alert>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      <header className="border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Sparkles className="h-8 w-8 text-primary" />
-              <div>
-                <h1 className="text-2xl font-bold">AI Social Links Generator</h1>
-                <p className="text-sm text-muted-foreground">
-                  Generate engaging social media posts with tracked links
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={generateBulkPosts}
-                disabled={isGeneratingBulk || !deals || deals.length === 0}
-                className="gap-2"
-              >
-                <Sparkles className="h-4 w-4" />
-                {isGeneratingBulk ? "Generating..." : "Generate All"}
-              </Button>
-              <Button
-                onClick={exportToCSV}
-                variant="outline"
-                disabled={Object.keys(socialPosts).length === 0}
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
+      <header className="border-b bg-card/95 backdrop-blur">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">{project.name} - Social Links</h1>
+              <p className="text-sm text-muted-foreground">
+                Generate and copy social media posts
+              </p>
             </div>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Failed to load deals. Please try again later.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {isLoading ? (
-          <div className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-10 w-32" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : deals && deals.length > 0 ? (
+        {deals && deals.length > 0 ? (
           <div className="space-y-4">
             {deals.map((deal) => {
               const post = socialPosts[deal.id];
@@ -308,7 +245,7 @@ const SocialLinksGenerator = () => {
                             ) : (
                               <>
                                 <Copy className="h-4 w-4" />
-                                Copy Text
+                                Copy Post
                               </>
                             )}
                           </Button>
@@ -339,4 +276,4 @@ const SocialLinksGenerator = () => {
   );
 };
 
-export default SocialLinksGenerator;
+export default ProjectSocial;
