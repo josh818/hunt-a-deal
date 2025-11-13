@@ -103,7 +103,14 @@ const ProjectDeals = () => {
       <header className="border-b bg-card/95 backdrop-blur">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-3">
-            <TrendingDown className="h-8 w-8 text-primary" />
+            {project.logo_url && (
+              <img 
+                src={project.logo_url} 
+                alt={project.name} 
+                className="h-12 w-12 object-contain"
+              />
+            )}
+            {!project.logo_url && <TrendingDown className="h-8 w-8 text-primary" />}
             <div>
               <h1 className="text-2xl font-bold">{project.name}</h1>
               <p className="text-sm text-muted-foreground">

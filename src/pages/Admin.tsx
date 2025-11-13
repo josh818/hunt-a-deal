@@ -21,6 +21,7 @@ interface Project {
   slug: string;
   tracking_code: string;
   description: string | null;
+  logo_url: string | null;
   created_at: string;
   is_active: boolean;
 }
@@ -30,6 +31,7 @@ const Admin = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [newProject, setNewProject] = useState({
     name: "",
     slug: "",
@@ -100,6 +102,26 @@ const Admin = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      let logoUrl = null;
+
+      // Upload logo if provided
+      if (logoFile) {
+        const fileExt = logoFile.name.split('.').pop();
+        const fileName = `${project.slug}-${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('project-logos')
+          .upload(fileName, logoFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('project-logos')
+          .getPublicUrl(fileName);
+
+        logoUrl = publicUrl;
+      }
+
       const { data, error } = await supabase
         .from('projects')
         .insert({
@@ -107,6 +129,7 @@ const Admin = () => {
           slug: project.slug,
           tracking_code: project.tracking_code,
           description: project.description || null,
+          logo_url: logoUrl,
           created_by: user.id,
         })
         .select()
@@ -118,6 +141,7 @@ const Admin = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setIsDialogOpen(false);
+      setLogoFile(null);
       setNewProject({ name: "", slug: "", tracking_code: "", description: "" });
       toast.success("Project created successfully!");
     },
@@ -236,6 +260,18 @@ const Admin = () => {
                     onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
                     placeholder="Description of the project..."
                   />
+                </div>
+                <div>
+                  <Label htmlFor="logo">Project Logo (Optional)</Label>
+                  <Input
+                    id="logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Upload a logo to brand your deal pages
+                  </p>
                 </div>
                 <Button
                   onClick={() => createProject.mutate(newProject)}
