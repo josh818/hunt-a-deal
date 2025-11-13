@@ -71,7 +71,7 @@ const Admin = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('*')
+        .select('id, name, slug, tracking_code, description, logo_url, created_at, created_by, updated_at, is_active')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
