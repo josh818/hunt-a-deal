@@ -9,8 +9,9 @@ import { Deal } from "@/types/deal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, TrendingDown, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import logo from "@/assets/relay-station-logo.png";
 
 const fetchDeals = async (): Promise<Deal[]> => {
   // Fetch deals from our database cache
@@ -173,9 +174,9 @@ const Deals = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <TrendingDown className="h-8 w-8 text-primary" />
+              <img src={logo} alt="Relay Station" className="h-10 w-10" />
               <div>
-                <h1 className="text-2xl font-bold">Deal Finder</h1>
+                <h1 className="text-2xl font-bold">Relay Station</h1>
                 <p className="text-sm text-muted-foreground">
                   Discover the hottest deals online
                 </p>
