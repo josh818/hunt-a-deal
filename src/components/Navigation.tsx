@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Tag, Share2, Sparkles, Settings, LogOut } from "lucide-react";
+import { Home, Tag, Share2, Sparkles, Settings, Clock, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -45,6 +45,7 @@ export const Navigation = () => {
 
   if (isAdmin) {
     navItems.push({ path: "/admin", label: "Admin", icon: Settings });
+    navItems.push({ path: "/admin/cron-jobs", label: "Cron Jobs", icon: Clock });
   }
 
   return (
