@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import logo from "@/assets/relay-station-logo.png";
 
 const checkIsAdmin = async () => {
   const { data: { user } } = await supabase.auth.getUser();
@@ -51,6 +52,11 @@ export const Navigation = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-2">
+              <img src={logo} alt="Relay Station" className="h-8 w-8" />
+              <span className="hidden sm:inline font-semibold text-lg">Relay Station</span>
+            </Link>
+            <div className="flex items-center gap-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -70,6 +76,7 @@ export const Navigation = () => {
                 </Link>
               );
             })}
+            </div>
           </div>
           <Button
             variant="ghost"

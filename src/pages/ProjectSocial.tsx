@@ -21,7 +21,7 @@ const ProjectSocial = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('id, name, slug, tracking_code, description, logo_url, created_at, created_by, updated_at, is_active')
+        .select('id, name, slug, tracking_code, description, created_at, created_by, updated_at, is_active')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -171,14 +171,7 @@ const ProjectSocial = () => {
       <header className="border-b bg-card/95 backdrop-blur">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-3">
-            {project.logo_url && (
-              <img 
-                src={project.logo_url} 
-                alt={project.name} 
-                className="h-12 w-12 object-contain"
-              />
-            )}
-            {!project.logo_url && <Sparkles className="h-8 w-8 text-primary" />}
+            <Sparkles className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-2xl font-bold">{project.name} - Social Links</h1>
               <p className="text-sm text-muted-foreground">
