@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_activity_log: {
+        Row: {
+          action_type: string
+          admin_user_id: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          target_user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_user_id: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          target_user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_user_id?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       click_tracking: {
         Row: {
           clicked_at: string | null
@@ -51,6 +78,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cron_job_health: {
+        Row: {
+          alert_sent: boolean | null
+          consecutive_failures: number | null
+          created_at: string | null
+          failed_runs: number | null
+          id: string
+          job_id: number
+          job_name: string
+          last_failure_at: string | null
+          last_success_at: string | null
+          status: string
+          successful_runs: number | null
+          total_runs: number | null
+          updated_at: string | null
+          uptime_percentage: number | null
+        }
+        Insert: {
+          alert_sent?: boolean | null
+          consecutive_failures?: number | null
+          created_at?: string | null
+          failed_runs?: number | null
+          id?: string
+          job_id: number
+          job_name: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          status: string
+          successful_runs?: number | null
+          total_runs?: number | null
+          updated_at?: string | null
+          uptime_percentage?: number | null
+        }
+        Update: {
+          alert_sent?: boolean | null
+          consecutive_failures?: number | null
+          created_at?: string | null
+          failed_runs?: number | null
+          id?: string
+          job_id?: number
+          job_name?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          status?: string
+          successful_runs?: number | null
+          total_runs?: number | null
+          updated_at?: string | null
+          uptime_percentage?: number | null
+        }
+        Relationships: []
       }
       deals: {
         Row: {
@@ -109,6 +187,24 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           created_at: string | null
@@ -116,6 +212,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          logo_url: string | null
           name: string
           slug: string | null
           tracking_code: string
@@ -127,6 +224,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          logo_url?: string | null
           name: string
           slug?: string | null
           tracking_code: string
@@ -138,6 +236,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          logo_url?: string | null
           name?: string
           slug?: string | null
           tracking_code?: string
@@ -171,11 +270,45 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_cron_job_runs: {
+        Args: never
+        Returns: {
+          end_time: string
+          jobid: number
+          return_message: string
+          runid: number
+          start_time: string
+          status: string
+        }[]
+      }
+      get_cron_jobs: {
+        Args: never
+        Returns: {
+          active: boolean
+          command: string
+          database: string
+          jobid: number
+          jobname: string
+          nodename: string
+          nodeport: number
+          schedule: string
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      promote_to_admin: { Args: { target_user_id: string }; Returns: undefined }
+      toggle_cron_job: {
+        Args: { job_id: number; new_active: boolean }
+        Returns: boolean
+      }
+      update_cron_schedule: {
+        Args: { job_id: number; new_schedule: string }
         Returns: boolean
       }
     }
