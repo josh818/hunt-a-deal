@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Facebook, Twitter, Linkedin, Instagram, Github } from "lucide-react";
-import logo from "@/assets/relay-station-logo.png";
+import logo from "@/assets/relay-station-logo-new.png";
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -12,7 +12,7 @@ export const Footer = () => {
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <img src={logo} alt="Relay Station" className="h-8 w-8" />
+              <img src={logo} alt="Relay Station" className="h-10 w-auto" />
               <span className="font-semibold text-lg">Relay Station</span>
             </div>
             <p className="text-sm text-muted-foreground">

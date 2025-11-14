@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import logo from "@/assets/relay-station-logo.png";
+import logo from "@/assets/relay-station-logo-new.png";
 
 const fetchDeals = async (): Promise<Deal[]> => {
   // Fetch deals from our database cache
