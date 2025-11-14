@@ -1,9 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Star } from "lucide-react";
+import { ExternalLink, Star, ImageOff } from "lucide-react";
 import { Deal } from "@/types/deal";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 interface DealCardProps {
   deal: Deal;
@@ -12,6 +13,7 @@ interface DealCardProps {
 
 export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
   const navigate = useNavigate();
+  const [imageError, setImageError] = useState(false);
   const savings = deal.originalPrice 
     ? ((deal.originalPrice - deal.price) / deal.originalPrice * 100).toFixed(0)
     : deal.discount;
@@ -19,18 +21,20 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
   return (
     <Card className="group overflow-hidden transition-all hover:shadow-lg">
       <div className="relative aspect-square overflow-hidden bg-muted">
-        <img 
-          src={deal.imageUrl} 
-          alt={deal.title}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            if (!target.src.includes('placeholder.svg')) {
-              target.src = '/placeholder.svg';
-            }
-          }}
-        />
+        {imageError ? (
+          <div className="h-full w-full flex flex-col items-center justify-center bg-muted">
+            <ImageOff className="h-16 w-16 text-muted-foreground/50 mb-2" />
+            <p className="text-sm text-muted-foreground">Image unavailable</p>
+          </div>
+        ) : (
+          <img 
+            src={deal.imageUrl} 
+            alt={deal.title}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            onError={() => setImageError(true)}
+          />
+        )}
         {savings && (
           <Badge className="absolute right-2 top-2 bg-[hsl(var(--deal-badge))] text-[hsl(var(--deal-badge-foreground))] hover:bg-[hsl(var(--deal-badge))]">
             {savings}% OFF
