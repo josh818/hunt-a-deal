@@ -3,6 +3,47 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function takeScreenshot(url: string): Promise<Response | null> {
+  try {
+    console.log('Attempting to take screenshot of:', url);
+    
+    // Use screenshotone.com API for screenshots
+    const screenshotApiKey = Deno.env.get('SCREENSHOT_API_KEY');
+    
+    if (!screenshotApiKey) {
+      console.log('No screenshot API key configured, skipping screenshot fallback');
+      return null;
+    }
+    
+    const screenshotUrl = new URL('https://api.screenshotone.com/take');
+    screenshotUrl.searchParams.set('access_key', screenshotApiKey);
+    screenshotUrl.searchParams.set('url', url);
+    screenshotUrl.searchParams.set('viewport_width', '1280');
+    screenshotUrl.searchParams.set('viewport_height', '800');
+    screenshotUrl.searchParams.set('device_scale_factor', '1');
+    screenshotUrl.searchParams.set('format', 'jpg');
+    screenshotUrl.searchParams.set('image_quality', '80');
+    screenshotUrl.searchParams.set('block_ads', 'true');
+    screenshotUrl.searchParams.set('block_cookie_banners', 'true');
+    screenshotUrl.searchParams.set('block_trackers', 'true');
+    screenshotUrl.searchParams.set('cache', 'true');
+    screenshotUrl.searchParams.set('cache_ttl', '2592000'); // 30 days
+    
+    const response = await fetch(screenshotUrl.toString());
+    
+    if (!response.ok) {
+      console.error('Screenshot API failed:', response.status);
+      return null;
+    }
+    
+    console.log('Screenshot captured successfully');
+    return response;
+  } catch (error) {
+    console.error('Error taking screenshot:', error);
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -105,7 +146,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Additional check: reject if hostname is an IP address that's not Amazon CDN
+    // Additional check: reject if hostname is an IP address
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
     if (ipRegex.test(hostnameToCheck)) {
       console.error('Direct IP addresses are not allowed:', hostnameToCheck);
@@ -115,6 +156,26 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Try screenshot approach first as it's more reliable than scraping
+    console.log('Attempting screenshot capture for:', productUrl);
+    const screenshotResponse = await takeScreenshot(productUrl);
+    
+    if (screenshotResponse && screenshotResponse.ok) {
+      const imageBuffer = await screenshotResponse.arrayBuffer();
+      
+      return new Response(imageBuffer, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'image/jpeg',
+          'Cache-Control': 'public, max-age=2592000', // 30 days
+          'X-Image-Source': 'screenshot'
+        },
+      });
+    }
+
+    // Fallback to old scraping method if screenshot fails
+    console.log('Screenshot failed or not configured, falling back to page scraping');
+    
     // Fetch the Amazon product page
     const response = await fetch(productUrl, {
       headers: {
