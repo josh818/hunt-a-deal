@@ -68,12 +68,12 @@ const CronJobs = () => {
   const { data: cronJobs, isLoading: loadingJobs } = useQuery({
     queryKey: ['cronJobs'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_cron_jobs');
+      const { data, error } = await supabase.rpc('get_cron_jobs' as any);
       if (error) {
         console.error('Error fetching cron jobs:', error);
         throw error;
       }
-      return data as CronJob[];
+      return data as unknown as CronJob[];
     },
     enabled: isAdmin === true,
   });
@@ -82,12 +82,12 @@ const CronJobs = () => {
   const { data: jobRuns, isLoading: loadingRuns } = useQuery({
     queryKey: ['jobRuns'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_cron_job_runs');
+      const { data, error } = await supabase.rpc('get_cron_job_runs' as any);
       if (error) {
         console.error('Error fetching job runs:', error);
         throw error;
       }
-      return data as JobRun[];
+      return data as unknown as JobRun[];
     },
     enabled: isAdmin === true,
   });

@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import Test12345SocialLinks from "./pages/Test12345SocialLinks";
 import SocialLinksGenerator from "./pages/SocialLinksGenerator";
 import Admin from "./pages/Admin";
+import CronJobs from "./pages/CronJobs";
 import ProjectDeals from "./pages/ProjectDeals";
 import ProjectSocial from "./pages/ProjectSocial";
 import LogoEditor from "./pages/LogoEditor";
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/test12345/sociallinks" element={<Test12345SocialLinks />} />
           <Route path="/social-links-generator" element={<SocialLinksGenerator />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/cron-jobs" element={<CronJobs />} />
           <Route path="/project/:slug/deals" element={<ProjectDeals />} />
           <Route path="/project/:slug/social" element={<ProjectSocial />} />
           <Route path="/logo-editor" element={<LogoEditor />} />
