@@ -13,6 +13,7 @@ import SocialLinksGenerator from "./pages/SocialLinksGenerator";
 import Admin from "./pages/Admin";
 import CronJobs from "./pages/CronJobs";
 import CronAnalytics from "./pages/CronAnalytics";
+import CronMonitoring from "./pages/CronMonitoring";
 import ProjectDeals from "./pages/ProjectDeals";
 import ProjectSocial from "./pages/ProjectSocial";
 import LogoEditor from "./pages/LogoEditor";
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/cron-jobs" element={<CronJobs />} />
           <Route path="/admin/cron-analytics" element={<CronAnalytics />} />
+          <Route path="/admin/cron-monitoring" element={<CronMonitoring />} />
           <Route path="/project/:slug/deals" element={<ProjectDeals />} />
           <Route path="/project/:slug/social" element={<ProjectSocial />} />
           <Route path="/logo-editor" element={<LogoEditor />} />
