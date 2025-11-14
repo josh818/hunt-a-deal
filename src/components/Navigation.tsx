@@ -60,8 +60,6 @@ export const Navigation = () => {
 
   if (isAdmin) {
     navItems.push({ path: "/admin", label: "Admin", icon: Settings });
-    navItems.push({ path: "/admin/users", label: "Users", icon: Users });
-    navItems.push({ path: "/admin/activity-log", label: "Activity Log", icon: FileText });
     navItems.push({ path: "/admin/cron-jobs", label: "Cron Jobs", icon: Clock });
     navItems.push({ path: "/admin/cron-analytics", label: "Analytics", icon: BarChart3 });
     navItems.push({ path: "/admin/cron-monitoring", label: "Monitoring", icon: Shield });

@@ -12,8 +12,6 @@ import NotFound from "./pages/NotFound";
 import Test12345SocialLinks from "./pages/Test12345SocialLinks";
 import SocialLinksGenerator from "./pages/SocialLinksGenerator";
 import Admin from "./pages/Admin";
-import AdminUsers from "./pages/AdminUsers";
-import AdminActivityLog from "./pages/AdminActivityLog";
 import CronJobs from "./pages/CronJobs";
 import CronAnalytics from "./pages/CronAnalytics";
 import CronMonitoring from "./pages/CronMonitoring";
@@ -38,8 +36,6 @@ const App = () => (
             <Route path="/test12345/sociallinks" element={<Test12345SocialLinks />} />
             <Route path="/social-links-generator" element={<SocialLinksGenerator />} />
             <Route path="/admin" element={<Admin />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/activity-log" element={<AdminActivityLog />} />
             <Route path="/admin/cron-jobs" element={<CronJobs />} />
             <Route path="/admin/cron-analytics" element={<CronAnalytics />} />
             <Route path="/admin/cron-monitoring" element={<CronMonitoring />} />
