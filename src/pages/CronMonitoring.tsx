@@ -70,12 +70,12 @@ const CronMonitoring = () => {
     queryKey: ['cronHealth'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('cron_job_health')
+        .from('cron_job_health' as any)
         .select('*')
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      return data as JobHealth[];
+      return data as unknown as JobHealth[];
     },
     enabled: isAdmin === true,
   });
