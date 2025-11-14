@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DealCard } from "@/components/DealCard";
 import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
 import { Deal } from "@/types/deal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -131,6 +132,8 @@ const ProjectDeals = () => {
           </div>
         )}
       </main>
+      
+      <Footer />
     </div>
   );
 };
