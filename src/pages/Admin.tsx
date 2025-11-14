@@ -15,6 +15,20 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Trash2, Eye, AlertCircle, Copy, CheckCircle, BarChart } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { z } from "zod";
+
+const projectSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name too long"),
+  slug: z.string()
+    .min(1, "Slug is required")
+    .max(50, "Slug too long")
+    .regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
+  tracking_code: z.string()
+    .min(1, "Tracking code is required")
+    .max(50, "Tracking code too long")
+    .regex(/^[A-Za-z0-9_-]+$/, "Tracking code must contain only letters, numbers, hyphens, and underscores"),
+  description: z.string().max(500, "Description too long").optional(),
+});
 
 interface Project {
   id: string;
@@ -31,6 +45,7 @@ const Admin = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [newProject, setNewProject] = useState({
     name: "",
     slug: "",
@@ -98,16 +113,31 @@ const Admin = () => {
   // Create project mutation
   const createProject = useMutation({
     mutationFn: async (project: typeof newProject) => {
+      // Validate with zod
+      const validation = projectSchema.safeParse(project);
+      if (!validation.success) {
+        const errors: Record<string, string> = {};
+        validation.error.errors.forEach((err) => {
+          if (err.path[0]) {
+            errors[err.path[0] as string] = err.message;
+          }
+        });
+        setFormErrors(errors);
+        throw new Error("Validation failed");
+      }
+      
+      setFormErrors({});
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
         .from('projects')
         .insert({
-          name: project.name,
-          slug: project.slug,
-          tracking_code: project.tracking_code,
-          description: project.description || null,
+          name: validation.data.name,
+          slug: validation.data.slug,
+          tracking_code: validation.data.tracking_code,
+          description: validation.data.description || null,
           created_by: user.id,
         })
         .select()
@@ -120,10 +150,13 @@ const Admin = () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setIsDialogOpen(false);
       setNewProject({ name: "", slug: "", tracking_code: "", description: "" });
+      setFormErrors({});
       toast.success("Project created successfully!");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Failed to create project");
+      if (error.message !== "Validation failed") {
+        toast.error(error.message || "Failed to create project");
+      }
     },
   });
 
@@ -201,42 +234,70 @@ const Admin = () => {
                   <Input
                     id="name"
                     value={newProject.name}
-                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                    onChange={(e) => {
+                      setNewProject({ ...newProject, name: e.target.value });
+                      setFormErrors({ ...formErrors, name: "" });
+                    }}
                     placeholder="My Affiliate Project"
+                    className={formErrors.name ? "border-destructive" : ""}
                   />
+                  {formErrors.name && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.name}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="slug">URL Slug</Label>
                   <Input
                     id="slug"
                     value={newProject.slug}
-                    onChange={(e) => setNewProject({ ...newProject, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
+                    onChange={(e) => {
+                      setNewProject({ ...newProject, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') });
+                      setFormErrors({ ...formErrors, slug: "" });
+                    }}
                     placeholder="my-project"
+                    className={formErrors.slug ? "border-destructive" : ""}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Lowercase letters, numbers, and hyphens only (e.g., "my-project")
                   </p>
+                  {formErrors.slug && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.slug}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="tracking_code">Amazon Tracking Code</Label>
                   <Input
                     id="tracking_code"
                     value={newProject.tracking_code}
-                    onChange={(e) => setNewProject({ ...newProject, tracking_code: e.target.value })}
+                    onChange={(e) => {
+                      setNewProject({ ...newProject, tracking_code: e.target.value });
+                      setFormErrors({ ...formErrors, tracking_code: "" });
+                    }}
                     placeholder="yoursite-20"
+                    className={formErrors.tracking_code ? "border-destructive" : ""}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     The Amazon affiliate tag (e.g., "yoursite-20")
                   </p>
+                  {formErrors.tracking_code && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.tracking_code}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="description">Description (Optional)</Label>
                   <Textarea
                     id="description"
                     value={newProject.description}
-                    onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                    onChange={(e) => {
+                      setNewProject({ ...newProject, description: e.target.value });
+                      setFormErrors({ ...formErrors, description: "" });
+                    }}
                     placeholder="Description of the project..."
+                    className={formErrors.description ? "border-destructive" : ""}
                   />
+                  {formErrors.description && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.description}</p>
+                  )}
                 </div>
                 <Button
                   onClick={() => createProject.mutate(newProject)}

@@ -36,6 +36,26 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Verify secret for authentication
+    const authHeader = req.headers.get('x-sync-secret');
+    const expectedSecret = Deno.env.get('SYNC_DEALS_SECRET');
+    
+    if (!expectedSecret) {
+      console.error('SYNC_DEALS_SECRET not configured');
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    if (authHeader !== expectedSecret) {
+      console.error('Invalid or missing authentication secret');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     console.log('Starting deals sync process...');
 
     // Fetch deals from external API

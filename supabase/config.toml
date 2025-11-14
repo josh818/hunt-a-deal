@@ -4,10 +4,10 @@ project_id = "lichnftmbdhonovtedkp"
 verify_jwt = false
 
 [functions.image-proxy]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-social-post]
-verify_jwt = false
+verify_jwt = true
 
 [functions.track-click]
 verify_jwt = false
