@@ -41,6 +41,7 @@ const fetchUsers = async (): Promise<UserProfile[]> => {
     .order('created_at', { ascending: false });
 
   if (profilesError) throw profilesError;
+  if (!profiles) return [];
 
   // Fetch all user roles
   const { data: userRoles, error: rolesError } = await supabase
@@ -48,10 +49,13 @@ const fetchUsers = async (): Promise<UserProfile[]> => {
     .select('user_id, role');
 
   if (rolesError) throw rolesError;
+  if (!userRoles) return profiles.map(p => ({ ...p, roles: [] }));
 
   // Combine profiles with their roles
   return profiles.map(profile => ({
-    ...profile,
+    id: profile.id,
+    email: profile.email,
+    created_at: profile.created_at,
     roles: userRoles
       .filter(role => role.user_id === profile.id)
       .map(role => role.role)
