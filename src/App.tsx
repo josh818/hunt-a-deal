@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import Deals from "./pages/Deals";
 import DealLanding from "./pages/DealLanding";
@@ -22,29 +23,31 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/deals" element={<Deals />} />
-          <Route path="/deal/:id" element={<DealLanding />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/test12345/sociallinks" element={<Test12345SocialLinks />} />
-          <Route path="/social-links-generator" element={<SocialLinksGenerator />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/cron-jobs" element={<CronJobs />} />
-          <Route path="/admin/cron-analytics" element={<CronAnalytics />} />
-          <Route path="/admin/cron-monitoring" element={<CronMonitoring />} />
-          <Route path="/project/:slug/deals" element={<ProjectDeals />} />
-          <Route path="/project/:slug/social" element={<ProjectSocial />} />
-          <Route path="/logo-editor" element={<LogoEditor />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TooltipProvider>
+        <BrowserRouter>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/deals" element={<Deals />} />
+            <Route path="/deal/:id" element={<DealLanding />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/test12345/sociallinks" element={<Test12345SocialLinks />} />
+            <Route path="/social-links-generator" element={<SocialLinksGenerator />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin/cron-jobs" element={<CronJobs />} />
+            <Route path="/admin/cron-analytics" element={<CronAnalytics />} />
+            <Route path="/admin/cron-monitoring" element={<CronMonitoring />} />
+            <Route path="/project/:slug/deals" element={<ProjectDeals />} />
+            <Route path="/project/:slug/social" element={<ProjectSocial />} />
+            <Route path="/logo-editor" element={<LogoEditor />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
