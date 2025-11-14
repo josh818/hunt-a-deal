@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Tag, Share2, Sparkles, Settings, Clock, BarChart3, Shield, LogOut } from "lucide-react";
+import { Home, Tag, Share2, Sparkles, Settings, Clock, BarChart3, Shield, LogOut, RefreshCw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -36,6 +36,21 @@ export const Navigation = () => {
     navigate('/auth');
   };
 
+  const syncDeals = async () => {
+    try {
+      toast.loading("Refreshing deals from source...");
+      const { error } = await supabase.functions.invoke('sync-deals');
+      
+      if (error) throw error;
+      
+      toast.success("Deals refreshed successfully!");
+      window.location.reload();
+    } catch (error) {
+      console.error('Error syncing deals:', error);
+      toast.error("Failed to refresh deals");
+    }
+  };
+
   const navItems = [
     { path: "/", label: "Home", icon: Home },
     { path: "/deals", label: "All Deals", icon: Tag },
@@ -45,6 +60,7 @@ export const Navigation = () => {
 
   if (isAdmin) {
     navItems.push({ path: "/admin", label: "Admin", icon: Settings });
+    navItems.push({ path: "/admin/users", label: "Users", icon: Users });
     navItems.push({ path: "/admin/cron-jobs", label: "Cron Jobs", icon: Clock });
     navItems.push({ path: "/admin/cron-analytics", label: "Analytics", icon: BarChart3 });
     navItems.push({ path: "/admin/cron-monitoring", label: "Monitoring", icon: Shield });
@@ -81,15 +97,26 @@ export const Navigation = () => {
             })}
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Sign Out</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={syncDeals}
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Refresh Deals</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
+          </div>
         </div>
       </div>
     </nav>
