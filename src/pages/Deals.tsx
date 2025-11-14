@@ -9,10 +9,7 @@ import { FilterBar, Filters } from "@/components/FilterBar";
 import { Deal } from "@/types/deal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
-import logo from "@/assets/relay-station-logo-new.png";
+import { AlertCircle } from "lucide-react";
 
 const fetchDeals = async (): Promise<Deal[]> => {
   // Fetch deals from our database cache
@@ -61,27 +58,11 @@ const Deals = () => {
     };
   });
 
-  const { data: deals, isLoading, error, refetch } = useQuery({
+  const { data: deals, isLoading, error } = useQuery({
     queryKey: ["deals"],
     queryFn: fetchDeals,
     refetchInterval: 60000, // Refetch every minute to check for new cached data
   });
-
-  const syncDeals = async () => {
-    try {
-      toast.loading("Refreshing deals from source...");
-      const { error } = await supabase.functions.invoke('sync-deals');
-      
-      if (error) throw error;
-      
-      // Refetch the deals from database after sync
-      await refetch();
-      toast.success("Deals refreshed successfully!");
-    } catch (error) {
-      console.error('Error syncing deals:', error);
-      toast.error("Failed to refresh deals");
-    }
-  };
 
   useEffect(() => {
     localStorage.setItem("affiliateTrackingCode", trackingCode);
@@ -169,27 +150,6 @@ const Deals = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
-      {/* Header */}
-      <header className="border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={logo} alt="Relay Station" className="h-10 w-10" />
-              <div>
-                <h1 className="text-2xl font-bold">Relay Station</h1>
-                <p className="text-sm text-muted-foreground">
-                  Discover the hottest deals online
-                </p>
-              </div>
-            </div>
-            <Button onClick={syncDeals} variant="outline" size="sm">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh Deals
-            </Button>
-          </div>
-        </div>
-      </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
