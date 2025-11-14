@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
 import { DealCard } from "@/components/DealCard";
 import { TrackingSettings } from "@/components/TrackingSettings";
 import { FilterBar, Filters } from "@/components/FilterBar";
@@ -250,6 +251,8 @@ const Deals = () => {
         trackingCode={trackingCode}
         onTrackingCodeChange={setTrackingCode}
       />
+      
+      <Footer />
     </div>
   );
 };

@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
+import { Footer } from "@/components/Footer";
 import { DealCard } from "@/components/DealCard";
 import { FilterBar, Filters } from "@/components/FilterBar";
 import { Deal } from "@/types/deal";
@@ -217,6 +218,8 @@ const Test12345SocialLinks = () => {
           </div>
         )}
       </main>
+      
+      <Footer />
     </div>
   );
 };
