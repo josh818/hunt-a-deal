@@ -8,7 +8,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Clock, Play, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Clock, Play, RefreshCw, AlertCircle, CheckCircle, Pause, Edit2, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -37,6 +57,11 @@ const CronJobs = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [triggering, setTriggering] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<CronJob | null>(null);
+  const [newSchedule, setNewSchedule] = useState("");
+  const [actionType, setActionType] = useState<"pause" | "resume" | "edit" | null>(null);
 
   // Check if user is admin
   const { data: isAdmin, isLoading: checkingAdmin } = useQuery({
@@ -119,6 +144,96 @@ const CronJobs = () => {
     } finally {
       setTriggering(false);
     }
+  };
+
+  // Toggle job active status mutation
+  const toggleJobMutation = useMutation({
+    mutationFn: async ({ jobId, newActive }: { jobId: number; newActive: boolean }) => {
+      const { data, error } = await supabase.rpc('toggle_cron_job' as any, {
+        job_id: jobId,
+        new_active: newActive
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      toast.success(`Job ${variables.newActive ? 'resumed' : 'paused'} successfully`);
+      queryClient.invalidateQueries({ queryKey: ['cronJobs'] });
+    },
+    onError: (error: any) => {
+      console.error('Error toggling job:', error);
+      toast.error(error.message || "Failed to update job status");
+    },
+  });
+
+  // Update schedule mutation
+  const updateScheduleMutation = useMutation({
+    mutationFn: async ({ jobId, schedule }: { jobId: number; schedule: string }) => {
+      const { data, error } = await supabase.rpc('update_cron_schedule' as any, {
+        job_id: jobId,
+        new_schedule: schedule
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Schedule updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['cronJobs'] });
+      setEditDialogOpen(false);
+      setSelectedJob(null);
+      setNewSchedule("");
+    },
+    onError: (error: any) => {
+      console.error('Error updating schedule:', error);
+      toast.error(error.message || "Failed to update schedule");
+    },
+  });
+
+  const handlePauseResume = (job: CronJob, pause: boolean) => {
+    setSelectedJob(job);
+    setActionType(pause ? "pause" : "resume");
+    setConfirmDialogOpen(true);
+  };
+
+  const handleEditSchedule = (job: CronJob) => {
+    setSelectedJob(job);
+    setNewSchedule(job.schedule);
+    setEditDialogOpen(true);
+  };
+
+  const confirmAction = async () => {
+    if (!selectedJob) return;
+
+    if (actionType === "pause" || actionType === "resume") {
+      await toggleJobMutation.mutateAsync({
+        jobId: selectedJob.jobid,
+        newActive: actionType === "resume"
+      });
+    }
+
+    setConfirmDialogOpen(false);
+    setSelectedJob(null);
+    setActionType(null);
+  };
+
+  const submitScheduleEdit = async () => {
+    if (!selectedJob || !newSchedule.trim()) {
+      toast.error("Please enter a valid schedule");
+      return;
+    }
+
+    await updateScheduleMutation.mutateAsync({
+      jobId: selectedJob.jobid,
+      schedule: newSchedule.trim()
+    });
+  };
+
+  const validateSchedule = (schedule: string): boolean => {
+    // Basic cron format validation
+    const cronRegex = /^(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)|((((\d+,)+\d+|(\d+(\/|-)\d+)|\d+|\*) ?){5,7})$/;
+    return cronRegex.test(schedule.trim());
   };
 
   const getLastRun = (jobName: string) => {
@@ -222,6 +337,7 @@ const CronJobs = () => {
                         <TableHead>Status</TableHead>
                         <TableHead>Last Run</TableHead>
                         <TableHead>Last Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -277,6 +393,40 @@ const CronJobs = () => {
                               ) : (
                                 <span className="text-sm text-muted-foreground">-</span>
                               )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditSchedule(job)}
+                                  className="gap-1"
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                  Edit
+                                </Button>
+                                {job.active ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePauseResume(job, true)}
+                                    className="gap-1"
+                                  >
+                                    <Pause className="h-3 w-3" />
+                                    Pause
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePauseResume(job, false)}
+                                    className="gap-1"
+                                  >
+                                    <PlayCircle className="h-3 w-3" />
+                                    Resume
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -372,6 +522,75 @@ const CronJobs = () => {
       </main>
       
       <Footer />
+
+      {/* Edit Schedule Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Cron Schedule</DialogTitle>
+            <DialogDescription>
+              Update the schedule for {selectedJob?.jobname}. Use standard cron format.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="schedule">Cron Schedule</Label>
+              <Input
+                id="schedule"
+                value={newSchedule}
+                onChange={(e) => setNewSchedule(e.target.value)}
+                placeholder="0 * * * * (every hour)"
+              />
+              <p className="text-sm text-muted-foreground">
+                Examples: "0 * * * *" (hourly), "0 0 * * *" (daily), "*/5 * * * *" (every 5 minutes)
+              </p>
+              {newSchedule && !validateSchedule(newSchedule) && (
+                <p className="text-sm text-destructive">Invalid cron format</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditDialogOpen(false);
+                setSelectedJob(null);
+                setNewSchedule("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitScheduleEdit}
+              disabled={!validateSchedule(newSchedule) || updateScheduleMutation.isPending}
+            >
+              {updateScheduleMutation.isPending ? "Updating..." : "Update Schedule"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {actionType === "pause" ? "Pause" : "Resume"} Cron Job?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to {actionType} the job "{selectedJob?.jobname}"?
+              {actionType === "pause" && " This will stop the job from running on schedule."}
+              {actionType === "resume" && " This will restart the job on its configured schedule."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmAction}>
+              {actionType === "pause" ? "Pause Job" : "Resume Job"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
