@@ -13,6 +13,7 @@ import SocialLinksGenerator from "./pages/SocialLinksGenerator";
 import Admin from "./pages/Admin";
 import ProjectDeals from "./pages/ProjectDeals";
 import ProjectSocial from "./pages/ProjectSocial";
+import LogoEditor from "./pages/LogoEditor";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/admin" element={<Admin />} />
           <Route path="/project/:slug/deals" element={<ProjectDeals />} />
           <Route path="/project/:slug/social" element={<ProjectSocial />} />
+          <Route path="/logo-editor" element={<LogoEditor />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
