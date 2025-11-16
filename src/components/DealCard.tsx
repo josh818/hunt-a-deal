@@ -15,6 +15,7 @@ interface DealCardProps {
 export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
   const savings = deal.originalPrice 
     ? ((deal.originalPrice - deal.price) / deal.originalPrice * 100).toFixed(0)
@@ -35,6 +36,9 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
   return (
     <Card className="group overflow-hidden transition-all hover:shadow-lg">
       <div className="relative aspect-square overflow-hidden bg-muted">
+        {!imageLoaded && !imageError && (
+          <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-muted via-muted-foreground/10 to-muted" />
+        )}
         {imageError ? (
           <div className="h-full w-full flex flex-col items-center justify-center bg-muted">
             <ImageOff className="h-16 w-16 text-muted-foreground/50 mb-2" />
@@ -45,7 +49,10 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
             src={deal.imageUrl} 
             alt={deal.title}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className={`h-full w-full object-cover transition-all duration-300 group-hover:scale-105 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+            onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
           />
         )}
