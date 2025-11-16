@@ -3,6 +3,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Simple in-memory rate limiter for AI generation (resets on function restart)
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute in ms
+const MAX_REQUESTS_PER_WINDOW = 10; // Max 10 requests per minute per IP
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = rateLimitMap.get(ip) || [];
+  
+  // Remove timestamps older than the window
+  const validTimestamps = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW);
+  
+  if (validTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    return false; // Rate limit exceeded
+  }
+  
+  // Add current timestamp
+  validTimestamps.push(now);
+  rateLimitMap.set(ip, validTimestamps);
+  
+  return true;
+}
+
 // Extract ASIN from Amazon URL
 function extractASIN(url: string): string | null {
   try {
@@ -137,15 +160,27 @@ async function scrapeImageFromPage(productUrl: string): Promise<string | null> {
 }
 
 // Generate AI image using Lovable AI as ultimate fallback
-async function generateAIProductImage(title: string): Promise<ArrayBuffer | null> {
+async function generateAIProductImage(title: string, ip: string): Promise<ArrayBuffer | null> {
   try {
+    // Check rate limit for AI generation
+    if (!checkRateLimit(ip)) {
+      console.warn(`Rate limit exceeded for AI generation, IP: ${ip}`);
+      return null;
+    }
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       console.log('LOVABLE_API_KEY not configured, skipping AI generation');
       return null;
     }
 
-    console.log('Generating AI product image for:', title);
+    // Validate and sanitize title
+    if (!title || title.length > 200) {
+      console.warn('Invalid or too long title for AI generation');
+      return null;
+    }
+
+    console.log('Generating AI product image for:', title.substring(0, 50));
     
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -202,6 +237,11 @@ Deno.serve(async (req) => {
     const productUrl = url.searchParams.get('url');
     const dealTitle = url.searchParams.get('title') || '';
 
+    // Get IP for rate limiting
+    const ip = req.headers.get('cf-connecting-ip') || 
+               req.headers.get('x-forwarded-for') || 
+               'unknown';
+
     if (!productUrl) {
       return new Response('Missing url parameter', { 
         status: 400,
@@ -213,6 +253,15 @@ Deno.serve(async (req) => {
     if (productUrl.length > 2048) {
       console.error('URL too long:', productUrl.length);
       return new Response('URL too long', { 
+        status: 400,
+        headers: corsHeaders 
+      });
+    }
+
+    // Validate title length
+    if (dealTitle.length > 500) {
+      console.error('Title too long:', dealTitle.length);
+      return new Response('Title too long', { 
         status: 400,
         headers: corsHeaders 
       });
@@ -349,12 +398,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Strategy 3: Try AI-generated image if title is provided
+    // Strategy 3: Try AI-generated image if title is provided (with rate limiting)
     console.error('All image fetching strategies failed');
     
     if (dealTitle) {
       console.log('Attempting AI image generation as fallback');
-      const aiImage = await generateAIProductImage(dealTitle);
+      const aiImage = await generateAIProductImage(dealTitle, ip);
       
       if (aiImage) {
         return new Response(aiImage, {
