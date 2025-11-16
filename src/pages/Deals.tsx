@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -150,6 +151,14 @@ const Deals = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Latest Deals - Relay Station | Curated Affiliate Offers</title>
+        <meta name="description" content={`Browse ${filteredDeals.length} curated deals with exclusive discounts. Find the best offers on electronics, home goods, and more.`} />
+        <meta property="og:title" content="Latest Deals - Relay Station" />
+        <meta property="og:description" content={`${filteredDeals.length} exclusive deals updated daily`} />
+        <link rel="canonical" href={window.location.href} />
+      </Helmet>
+      
       <Navigation />
 
       {/* Main Content */}
@@ -158,7 +167,7 @@ const Deals = () => {
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Failed to load deals. Please try again later.
+              Unable to load deals. This could be due to a network issue or server maintenance. Please refresh the page or try again in a few minutes.
             </AlertDescription>
           </Alert>
         )}
