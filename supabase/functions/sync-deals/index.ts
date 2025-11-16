@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       };
 
       // Extract ASIN from Amazon URL and build image URL through proxy
-      const getImageUrl = (url?: string, providedImage?: string): string => {
+      const getImageUrl = (url?: string, providedImage?: string, title?: string): string => {
         // Only use providedImage if it's a valid URL (not empty/null)
         if (providedImage && providedImage.trim() && providedImage.startsWith('http')) {
           return providedImage;
@@ -111,7 +111,9 @@ Deno.serve(async (req) => {
         }
         
         // Use image proxy to scrape the actual image from the Amazon product page
-        return `${supabaseUrl}/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
+        // Include title for AI fallback generation
+        const titleParam = title ? `&title=${encodeURIComponent(title)}` : '';
+        return `${supabaseUrl}/functions/v1/image-proxy?url=${encodeURIComponent(url)}${titleParam}`;
       };
 
       const price = parsePrice(item.price);
@@ -127,7 +129,7 @@ Deno.serve(async (req) => {
         price: price,
         original_price: originalPrice > 0 ? originalPrice : null,
         discount: discount,
-        image_url: getImageUrl(item.url, item.image),
+        image_url: getImageUrl(item.url, item.image, item.title),
         product_url: item.url || "",
         category: item.category || item.store || null,
         rating: item.rating ? parseFloat(String(item.rating)) : null,

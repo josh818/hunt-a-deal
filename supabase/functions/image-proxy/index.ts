@@ -136,6 +136,62 @@ async function scrapeImageFromPage(productUrl: string): Promise<string | null> {
   }
 }
 
+// Generate AI image using Lovable AI as ultimate fallback
+async function generateAIProductImage(title: string): Promise<ArrayBuffer | null> {
+  try {
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.log('LOVABLE_API_KEY not configured, skipping AI generation');
+      return null;
+    }
+
+    console.log('Generating AI product image for:', title);
+    
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-image-preview',
+        messages: [{
+          role: 'user',
+          content: `Generate a professional, clean product image for: ${title}. Make it look like a high-quality e-commerce product photo with white or light background.`
+        }],
+        modalities: ['image', 'text']
+      })
+    });
+
+    if (!response.ok) {
+      console.error('AI image generation failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    if (!imageUrl || !imageUrl.startsWith('data:image')) {
+      console.error('Invalid AI image response');
+      return null;
+    }
+
+    // Convert base64 to ArrayBuffer
+    const base64Data = imageUrl.split(',')[1];
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    console.log('Successfully generated AI product image');
+    return bytes.buffer;
+  } catch (error) {
+    console.error('Error generating AI image:', error);
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -144,6 +200,7 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const productUrl = url.searchParams.get('url');
+    const dealTitle = url.searchParams.get('title') || '';
 
     if (!productUrl) {
       return new Response('Missing url parameter', { 
@@ -292,14 +349,43 @@ Deno.serve(async (req) => {
       }
     }
 
-    // All strategies failed - return placeholder
+    // Strategy 3: Try AI-generated image if title is provided
     console.error('All image fetching strategies failed');
     
+    if (dealTitle) {
+      console.log('Attempting AI image generation as fallback');
+      const aiImage = await generateAIProductImage(dealTitle);
+      
+      if (aiImage) {
+        return new Response(aiImage, {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=86400', // 1 day for AI-generated
+            'X-Image-Source': 'ai-generated',
+          },
+        });
+      }
+    }
+    
+    // Ultimate fallback: Simple branded placeholder
     const placeholderSvg = `
       <svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
-        <rect width="400" height="400" fill="#f0f0f0"/>
-        <text x="200" y="200" text-anchor="middle" font-family="Arial" font-size="18" fill="#666">
-          Image unavailable
+        <defs>
+          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#6366F1;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <rect width="400" height="400" fill="url(#grad)"/>
+        <text x="200" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white">
+          Relay Station
+        </text>
+        <text x="200" y="220" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="rgba(255,255,255,0.8)">
+          ${dealTitle ? dealTitle.substring(0, 40) + (dealTitle.length > 40 ? '...' : '') : 'Product Image'}
+        </text>
+        <text x="200" y="260" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="rgba(255,255,255,0.6)">
+          Image Loading Failed
         </text>
       </svg>
     `;
