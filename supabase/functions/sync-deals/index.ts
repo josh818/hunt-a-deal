@@ -139,18 +139,7 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Delete old deals (older than 1 day)
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { error: deleteError } = await supabase
-      .from('deals')
-      .delete()
-      .lt('fetched_at', oneDayAgo);
-
-    if (deleteError) {
-      console.error('Error deleting old deals:', deleteError);
-    }
-
-    // Upsert deals into database
+    // Upsert deals into database first
     const { data, error } = await supabase
       .from('deals')
       .upsert(transformedDeals, { onConflict: 'id' });
@@ -161,6 +150,31 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Successfully synced ${transformedDeals.length} deals to database`);
+
+    // Keep only the 100 most recent deals by fetched_at
+    // First, get all deal IDs ordered by fetched_at descending
+    const { data: allDeals, error: fetchError } = await supabase
+      .from('deals')
+      .select('id, fetched_at')
+      .order('fetched_at', { ascending: false });
+
+    if (fetchError) {
+      console.error('Error fetching deals for cleanup:', fetchError);
+    } else if (allDeals && allDeals.length > 100) {
+      // Get IDs of deals beyond the first 100
+      const dealsToDelete = allDeals.slice(100).map(d => d.id);
+      
+      const { error: deleteError } = await supabase
+        .from('deals')
+        .delete()
+        .in('id', dealsToDelete);
+
+      if (deleteError) {
+        console.error('Error deleting old deals:', deleteError);
+      } else {
+        console.log(`Cleaned up ${dealsToDelete.length} old deals, keeping the 100 most recent`);
+      }
+    }
 
     return new Response(
       JSON.stringify({
