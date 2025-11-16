@@ -11,6 +11,3 @@ verify_jwt = true
 
 [functions.track-click]
 verify_jwt = false
-
-[functions.test-api-structure]
-verify_jwt = false
