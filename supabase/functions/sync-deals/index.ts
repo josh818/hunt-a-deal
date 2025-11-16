@@ -68,6 +68,12 @@ Deno.serve(async (req) => {
 
     const apiResponse: APIResponse = await response.json();
     console.log(`Fetched ${apiResponse.count} total deals, ${apiResponse.products?.length || 0} products in response`);
+    
+    // Log first product to see all available fields
+    if (apiResponse.products && apiResponse.products.length > 0) {
+      console.log('Sample product fields:', Object.keys(apiResponse.products[0]));
+      console.log('Sample product data:', JSON.stringify(apiResponse.products[0], null, 2));
+    }
 
     if (!apiResponse.products || !Array.isArray(apiResponse.products)) {
       console.error('Invalid API response - missing products array:', apiResponse);
