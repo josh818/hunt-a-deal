@@ -134,6 +134,7 @@ export type Database = {
         Row: {
           brand: string | null
           category: string | null
+          coupon_code: string | null
           created_at: string | null
           description: string | null
           discount: number | null
@@ -152,6 +153,7 @@ export type Database = {
         Insert: {
           brand?: string | null
           category?: string | null
+          coupon_code?: string | null
           created_at?: string | null
           description?: string | null
           discount?: number | null
@@ -170,6 +172,7 @@ export type Database = {
         Update: {
           brand?: string | null
           category?: string | null
+          coupon_code?: string | null
           created_at?: string | null
           description?: string | null
           discount?: number | null

@@ -12,4 +12,5 @@ export interface Deal {
   reviewCount?: number;
   brand?: string;
   inStock?: boolean;
+  couponCode?: string;
 }
