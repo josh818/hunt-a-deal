@@ -28,6 +28,8 @@ interface DealResponse {
   reviews?: number;
   brand?: string;
   inStock?: boolean;
+  coupon_code?: string;
+  couponCode?: string;
 }
 
 Deno.serve(async (req) => {
@@ -126,6 +128,7 @@ Deno.serve(async (req) => {
         review_count: item.reviewCount || item.reviews || null,
         brand: item.brand || item.store || null,
         in_stock: item.inStock !== false,
+        coupon_code: item.coupon_code || item.couponCode || null,
         fetched_at: new Date().toISOString(),
       };
     });

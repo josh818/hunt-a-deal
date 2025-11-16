@@ -1,10 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Star, ImageOff } from "lucide-react";
+import { ExternalLink, Star, ImageOff, Copy, Check } from "lucide-react";
 import { Deal } from "@/types/deal";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
 
 interface DealCardProps {
   deal: Deal;
@@ -14,9 +15,22 @@ interface DealCardProps {
 export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
+  const [copied, setCopied] = useState(false);
   const savings = deal.originalPrice 
     ? ((deal.originalPrice - deal.price) / deal.originalPrice * 100).toFixed(0)
     : deal.discount;
+
+  const handleCopyCoupon = async () => {
+    if (deal.couponCode) {
+      await navigator.clipboard.writeText(deal.couponCode);
+      setCopied(true);
+      toast({
+        title: "Coupon copied!",
+        description: `Code "${deal.couponCode}" copied to clipboard`,
+      });
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <Card className="group overflow-hidden transition-all hover:shadow-lg">
@@ -84,6 +98,25 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
             <p className="text-sm font-semibold text-[hsl(var(--savings-text))]">
               Save ${deal.originalPrice ? (deal.originalPrice - deal.price).toFixed(2) : '—'}
             </p>
+          </div>
+        )}
+
+        {deal.couponCode && (
+          <div className="rounded-lg border border-dashed border-primary/50 bg-primary/5 px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Coupon Code</p>
+                <code className="text-sm font-mono font-bold text-primary">{deal.couponCode}</code>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCopyCoupon}
+                className="shrink-0"
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
         )}
 
