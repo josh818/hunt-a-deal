@@ -131,6 +131,18 @@ Deno.serve(async (req) => {
         [price, originalPrice] = [originalPrice, price];
       }
       
+      // Price sanity checks - reject deals with unreasonable prices
+      if (price <= 0 || price > 100000) {
+        console.log(`Skipping deal with invalid price: ${item.title} - Price: ${price}`);
+        return null;
+      }
+      
+      // If original price exists, ensure it's reasonable and greater than current price
+      if (originalPrice > 0 && (originalPrice <= price || originalPrice > 100000)) {
+        console.log(`Resetting invalid original price for: ${item.title} - Original: ${originalPrice}, keeping only price: ${price}`);
+        originalPrice = 0;
+      }
+      
       const discount = originalPrice > 0 && price > 0 
         ? ((originalPrice - price) / originalPrice * 100) 
         : null;
@@ -152,7 +164,7 @@ Deno.serve(async (req) => {
         coupon_code: item.coupon_code || item.couponCode || null,
         fetched_at: new Date().toISOString(),
       };
-    });
+    }).filter(deal => deal !== null);
 
     // Upsert deals into database first
     const { data, error } = await supabase
