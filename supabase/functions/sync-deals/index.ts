@@ -30,6 +30,7 @@ interface DealResponse {
   inStock?: boolean;
   coupon_code?: string;
   couponCode?: string;
+  timestamp?: string;
 }
 
 Deno.serve(async (req) => {
@@ -147,6 +148,17 @@ Deno.serve(async (req) => {
         ? ((originalPrice - price) / originalPrice * 100) 
         : null;
 
+      // Parse posted timestamp (e.g., "Nov 11, 2025 04:57 PM")
+      const parsePostedAt = (timestamp?: string): string | null => {
+        if (!timestamp) return null;
+        try {
+          const date = new Date(timestamp);
+          return isNaN(date.getTime()) ? null : date.toISOString();
+        } catch {
+          return null;
+        }
+      };
+
       return {
         id: `deal-${Date.now()}-${index}`,
         title: item.title || "Product",
@@ -162,6 +174,7 @@ Deno.serve(async (req) => {
         brand: item.brand || item.store || null,
         in_stock: item.inStock !== false,
         coupon_code: item.coupon_code || item.couponCode || null,
+        posted_at: parsePostedAt(item.timestamp),
         fetched_at: new Date().toISOString(),
       };
     }).filter(deal => deal !== null);

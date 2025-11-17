@@ -75,6 +75,13 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
           <p className="text-sm font-medium text-muted-foreground">{deal.brand}</p>
         )}
         
+        {deal.postedAt && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>Posted {formatDistanceToNow(new Date(deal.postedAt), { addSuffix: true })}</span>
+          </div>
+        )}
+        
         <h3 className="line-clamp-2 font-semibold leading-tight">{deal.title}</h3>
         
         {deal.rating && (

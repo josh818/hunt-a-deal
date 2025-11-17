@@ -35,6 +35,7 @@ const fetchDeal = async (id: string): Promise<Deal | null> => {
     brand: data.brand,
     inStock: data.in_stock,
     couponCode: data.coupon_code,
+    postedAt: data.posted_at,
     fetchedAt: data.fetched_at,
   };
 };
