@@ -1,12 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Star, ImageOff, Copy, Check, Clock } from "lucide-react";
+import { ExternalLink, Star, ImageOff, Copy, Check, Clock, AlertTriangle } from "lucide-react";
 import { Deal } from "@/types/deal";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInHours } from "date-fns";
 
 interface DealCardProps {
   deal: Deal;
@@ -22,6 +22,10 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
     ? Math.max(0, ((deal.originalPrice - deal.price) / deal.originalPrice * 100))
     : deal.discount;
   const savingsDisplay = savings && savings > 0 ? savings.toFixed(0) : null;
+  
+  const isDealExpired = deal.postedAt 
+    ? differenceInHours(new Date(), new Date(deal.postedAt)) > 25
+    : false;
 
   const handleCopyCoupon = async () => {
     if (deal.couponCode) {
@@ -55,14 +59,29 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
               imageLoaded ? 'opacity-100' : 'opacity-0'
             }`}
             onLoad={() => setImageLoaded(true)}
-            onError={() => setImageError(true)}
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              if (!img.src.includes('placeholder.svg')) {
+                img.src = '/placeholder.svg';
+              } else {
+                setImageError(true);
+              }
+            }}
           />
         )}
-        {savingsDisplay && (
-          <Badge className="absolute right-2 top-2 bg-[hsl(var(--deal-badge))] text-[hsl(var(--deal-badge-foreground))] hover:bg-[hsl(var(--deal-badge))]">
-            {savingsDisplay}% OFF
-          </Badge>
-        )}
+        <div className="absolute right-2 top-2 flex flex-col gap-2">
+          {savingsDisplay && (
+            <Badge className="bg-[hsl(var(--deal-badge))] text-[hsl(var(--deal-badge-foreground))] hover:bg-[hsl(var(--deal-badge))]">
+              {savingsDisplay}% OFF
+            </Badge>
+          )}
+          {isDealExpired && (
+            <Badge variant="destructive" className="flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              May Have Expired
+            </Badge>
+          )}
+        </div>
         {deal.inStock === false && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80">
             <Badge variant="destructive">Out of Stock</Badge>
