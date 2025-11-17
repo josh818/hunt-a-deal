@@ -116,8 +116,21 @@ Deno.serve(async (req) => {
         return `${supabaseUrl}/functions/v1/image-proxy?url=${encodeURIComponent(url)}${titleParam}`;
       };
 
-      const price = parsePrice(item.price);
-      const originalPrice = parsePrice(item.original_price);
+      let price = parsePrice(item.price);
+      let originalPrice = parsePrice(item.original_price);
+      
+      // Log raw prices for debugging
+      if (index < 3) {
+        console.log(`Deal ${index} - Raw price: ${item.price}, Raw original: ${item.original_price}`);
+        console.log(`Deal ${index} - Parsed price: ${price}, Parsed original: ${originalPrice}`);
+      }
+      
+      // Fix swapped prices - if current price is higher than original, swap them
+      if (originalPrice > 0 && price > originalPrice) {
+        console.log(`Swapping prices for: ${item.title} - Price: ${price} -> ${originalPrice}, Original: ${originalPrice} -> ${price}`);
+        [price, originalPrice] = [originalPrice, price];
+      }
+      
       const discount = originalPrice > 0 && price > 0 
         ? ((originalPrice - price) / originalPrice * 100) 
         : null;
