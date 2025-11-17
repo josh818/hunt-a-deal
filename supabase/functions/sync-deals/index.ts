@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
 
     console.log(`Price history tracking complete`);
 
-    // Keep only the 100 most recent deals by fetched_at
+    // Keep only the 25 most recent deals by fetched_at
     // First, get all deal IDs ordered by fetched_at descending
     const { data: allDeals, error: fetchError } = await supabase
       .from('deals')
@@ -194,9 +194,9 @@ Deno.serve(async (req) => {
 
     if (fetchError) {
       console.error('Error fetching deals for cleanup:', fetchError);
-    } else if (allDeals && allDeals.length > 100) {
-      // Get IDs of deals beyond the first 100
-      const dealsToDelete = allDeals.slice(100).map(d => d.id);
+    } else if (allDeals && allDeals.length > 25) {
+      // Get IDs of deals beyond the first 25
+      const dealsToDelete = allDeals.slice(25).map(d => d.id);
       
       const { error: deleteError } = await supabase
         .from('deals')
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
       if (deleteError) {
         console.error('Error deleting old deals:', deleteError);
       } else {
-        console.log(`Cleaned up ${dealsToDelete.length} old deals, keeping the 100 most recent`);
+        console.log(`Cleaned up ${dealsToDelete.length} old deals, keeping the 25 most recent`);
       }
     }
 
