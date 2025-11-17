@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Footer } from "@/components/Footer";
+import { PriceHistoryChart } from "@/components/PriceHistoryChart";
 import { Deal } from "@/types/deal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -210,9 +211,14 @@ const DealLanding = () => {
           )}
         </div>
       </div>
-      
-      <Footer />
+
+      {/* Price History Chart */}
+      <div className="mt-12">
+        <PriceHistoryChart dealId={id!} />
+      </div>
     </div>
+      
+    <Footer />
   </div>
 );
 };

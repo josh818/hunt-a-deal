@@ -153,6 +153,38 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully synced ${transformedDeals.length} deals to database`);
 
+    // Track price changes for price history
+    for (const deal of transformedDeals) {
+      // Get existing deal to check if price changed
+      const { data: existingDeal } = await supabase
+        .from('deals')
+        .select('price, original_price')
+        .eq('id', deal.id)
+        .single();
+
+      // Only record price history if deal exists and price changed, or if it's new
+      if (!existingDeal || 
+          existingDeal.price !== deal.price || 
+          existingDeal.original_price !== deal.original_price) {
+        
+        const { error: historyError } = await supabase
+          .from('deal_price_history')
+          .insert({
+            deal_id: deal.id,
+            price: deal.price,
+            original_price: deal.original_price,
+            discount: deal.discount,
+            recorded_at: deal.fetched_at,
+          });
+
+        if (historyError) {
+          console.error(`Error recording price history for deal ${deal.id}:`, historyError);
+        }
+      }
+    }
+
+    console.log(`Price history tracking complete`);
+
     // Keep only the 100 most recent deals by fetched_at
     // First, get all deal IDs ordered by fetched_at descending
     const { data: allDeals, error: fetchError } = await supabase
