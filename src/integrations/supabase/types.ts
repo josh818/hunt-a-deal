@@ -130,6 +130,44 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_price_history: {
+        Row: {
+          created_at: string
+          deal_id: string
+          discount: number | null
+          id: string
+          original_price: number | null
+          price: number
+          recorded_at: string
+        }
+        Insert: {
+          created_at?: string
+          deal_id: string
+          discount?: number | null
+          id?: string
+          original_price?: number | null
+          price: number
+          recorded_at?: string
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string
+          discount?: number | null
+          id?: string
+          original_price?: number | null
+          price?: number
+          recorded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_price_history_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deals: {
         Row: {
           brand: string | null
