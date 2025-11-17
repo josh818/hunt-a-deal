@@ -19,8 +19,9 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
   const savings = deal.originalPrice 
-    ? ((deal.originalPrice - deal.price) / deal.originalPrice * 100).toFixed(0)
+    ? Math.max(0, ((deal.originalPrice - deal.price) / deal.originalPrice * 100))
     : deal.discount;
+  const savingsDisplay = savings && savings > 0 ? savings.toFixed(0) : null;
 
   const handleCopyCoupon = async () => {
     if (deal.couponCode) {
@@ -57,9 +58,9 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
             onError={() => setImageError(true)}
           />
         )}
-        {savings && (
+        {savingsDisplay && (
           <Badge className="absolute right-2 top-2 bg-[hsl(var(--deal-badge))] text-[hsl(var(--deal-badge-foreground))] hover:bg-[hsl(var(--deal-badge))]">
-            {savings}% OFF
+            {savingsDisplay}% OFF
           </Badge>
         )}
         {deal.inStock === false && (
