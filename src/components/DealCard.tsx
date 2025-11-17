@@ -1,11 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Star, ImageOff, Copy, Check } from "lucide-react";
+import { ExternalLink, Star, ImageOff, Copy, Check, Clock } from "lucide-react";
 import { Deal } from "@/types/deal";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
+import { formatDistanceToNow } from "date-fns";
 
 interface DealCardProps {
   deal: Deal;
@@ -99,6 +100,17 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
             </span>
           )}
         </div>
+
+        {deal.fetchedAt && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+            <Clock className="h-3 w-3" />
+            <span>Price as of {formatDistanceToNow(new Date(deal.fetchedAt), { addSuffix: true })}</span>
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground italic">
+          *Prices may change at any time. Check current price on retailer's website.
+        </p>
 
         {savings && (
           <div className="rounded-lg bg-[hsl(var(--savings-bg))] px-3 py-2">

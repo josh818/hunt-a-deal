@@ -35,6 +35,8 @@ const fetchDeals = async (): Promise<Deal[]> => {
     reviewCount: item.review_count,
     brand: item.brand,
     inStock: item.in_stock,
+    couponCode: item.coupon_code,
+    fetchedAt: item.fetched_at,
   }));
 };
 

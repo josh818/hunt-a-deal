@@ -13,4 +13,5 @@ export interface Deal {
   brand?: string;
   inStock?: boolean;
   couponCode?: string;
+  fetchedAt?: string;
 }
