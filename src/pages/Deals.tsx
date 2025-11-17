@@ -40,6 +40,7 @@ const fetchDeals = async (): Promise<Deal[]> => {
     brand: item.brand,
     inStock: item.in_stock,
     couponCode: item.coupon_code,
+    fetchedAt: item.fetched_at,
   }));
 };
 

@@ -33,6 +33,8 @@ const fetchDeal = async (id: string): Promise<Deal | null> => {
     reviewCount: data.review_count,
     brand: data.brand,
     inStock: data.in_stock,
+    couponCode: data.coupon_code,
+    fetchedAt: data.fetched_at,
   };
 };
 
