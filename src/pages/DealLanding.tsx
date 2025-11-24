@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, Star, ArrowLeft } from "lucide-react";
+import { replaceTrackingCode } from "@/utils/trackingCode";
+import { trackClick } from "@/utils/clickTracking";
 
 const fetchDeal = async (id: string): Promise<Deal | null> => {
   const { data, error } = await supabase
@@ -90,10 +92,13 @@ const DealLanding = () => {
     ? ((deal.originalPrice - deal.price) / deal.originalPrice * 100).toFixed(0)
     : deal.discount;
 
-  const getAmazonUrl = () => {
-    const url = new URL(deal.productUrl);
-    url.searchParams.set("tag", trackingCode);
-    return url.toString();
+  const trackedUrl = replaceTrackingCode(deal.productUrl, trackingCode);
+
+  const handleDealClick = async () => {
+    await trackClick({
+      dealId: deal.id,
+      targetUrl: trackedUrl,
+    });
   };
 
   return (
@@ -197,9 +202,10 @@ const DealLanding = () => {
                 asChild
               >
                 <a
-                  href={getAmazonUrl()}
+                  href={trackedUrl}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noopener noreferrer nofollow"
+                  onClick={handleDealClick}
                 >
                   View Deal on Amazon
                   <ExternalLink className="ml-2 h-5 w-5" />

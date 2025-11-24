@@ -8,13 +8,15 @@ import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow, differenceInHours } from "date-fns";
 import { replaceTrackingCode } from "@/utils/trackingCode";
+import { trackClick } from "@/utils/clickTracking";
 
 interface DealCardProps {
   deal: Deal;
   trackingCode: string;
+  projectId?: string;
 }
 
-export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
+export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -42,6 +44,15 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
 
   // Apply tracking code to product URL
   const trackedUrl = replaceTrackingCode(deal.productUrl, trackingCode);
+
+  const handleDealClick = async () => {
+    // Track the click
+    await trackClick({
+      dealId: deal.id,
+      projectId,
+      targetUrl: trackedUrl,
+    });
+  };
 
   return (
     <Card className="group overflow-hidden transition-all hover:shadow-lg">
@@ -178,6 +189,7 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
             href={trackedUrl}
             target="_blank"
             rel="noopener noreferrer nofollow"
+            onClick={handleDealClick}
           >
             View Deal on Amazon
             <ExternalLink className="ml-2 h-4 w-4" />
