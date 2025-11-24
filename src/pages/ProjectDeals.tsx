@@ -125,6 +125,7 @@ const ProjectDeals = () => {
                 key={deal.id} 
                 deal={deal} 
                 trackingCode={project.tracking_code}
+                projectId={project.id}
               />
             ))}
           </div>

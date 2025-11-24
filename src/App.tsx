@@ -18,6 +18,7 @@ import CronMonitoring from "./pages/CronMonitoring";
 import ProjectDeals from "./pages/ProjectDeals";
 import ProjectSocial from "./pages/ProjectSocial";
 import LogoEditor from "./pages/LogoEditor";
+import Projects from "./pages/Projects";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/admin/cron-jobs" element={<CronJobs />} />
             <Route path="/admin/cron-analytics" element={<CronAnalytics />} />
             <Route path="/admin/cron-monitoring" element={<CronMonitoring />} />
+            <Route path="/projects" element={<Projects />} />
             <Route path="/project/:slug/deals" element={<ProjectDeals />} />
             <Route path="/project/:slug/social" element={<ProjectSocial />} />
             <Route path="/logo-editor" element={<LogoEditor />} />
