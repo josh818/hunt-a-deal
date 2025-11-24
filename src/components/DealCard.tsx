@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow, differenceInHours } from "date-fns";
+import { replaceTrackingCode } from "@/utils/trackingCode";
 
 interface DealCardProps {
   deal: Deal;
@@ -38,6 +39,9 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
       setTimeout(() => setCopied(false), 2000);
     }
   };
+
+  // Apply tracking code to product URL
+  const trackedUrl = replaceTrackingCode(deal.productUrl, trackingCode);
 
   return (
     <Card className="group overflow-hidden transition-all hover:shadow-lg">
@@ -168,10 +172,16 @@ export const DealCard = ({ deal, trackingCode }: DealCardProps) => {
 
         <Button 
           className="w-full" 
-          onClick={() => navigate(`/deal/${deal.id}`)}
+          asChild
         >
-          View Deal Details
-          <ExternalLink className="ml-2 h-4 w-4" />
+          <a
+            href={trackedUrl}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+          >
+            View Deal on Amazon
+            <ExternalLink className="ml-2 h-4 w-4" />
+          </a>
         </Button>
       </div>
     </Card>
