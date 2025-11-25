@@ -214,7 +214,7 @@ const Index = () => {
                   </div>
                   <p className="text-muted-foreground mb-1">For your first 3 months</p>
                   <p className="text-sm text-muted-foreground">
-                    Then $99/month • Cancel anytime
+                    Then $99/month
                   </p>
                 </div>
 
@@ -249,7 +249,7 @@ const Index = () => {
                 </Button>
 
                 <p className="text-center text-sm text-muted-foreground">
-                  No credit card required • Full access • Cancel anytime
+                  No credit card required • Full access
                 </p>
               </CardContent>
             </Card>
