@@ -1,4 +1,4 @@
-import { Navigation } from "@/components/Navigation";
+import { PublicNavigation } from "@/components/PublicNavigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+      <PublicNavigation />
       
       {/* Hero Section */}
       <section className="relative overflow-hidden">

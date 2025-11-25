@@ -21,6 +21,9 @@ import LogoEditor from "./pages/LogoEditor";
 import Projects from "./pages/Projects";
 import ApplicationForm from "./pages/ApplicationForm";
 import ApplicationPending from "./pages/ApplicationPending";
+import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
+import AdminApplications from "./pages/AdminApplications";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +41,9 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/apply" element={<ApplicationForm />} />
             <Route path="/application-pending" element={<ApplicationPending />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/admin/applications" element={<AdminApplications />} />
             <Route path="/test12345/sociallinks" element={<Test12345SocialLinks />} />
             <Route path="/social-links-generator" element={<SocialLinksGenerator />} />
             <Route path="/admin" element={<Admin />} />
