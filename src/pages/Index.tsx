@@ -6,12 +6,12 @@ import { ExternalLink, TestTube } from "lucide-react";
 import { trackClick } from "@/utils/clickTracking";
 
 const Index = () => {
-  // Test Amazon URL with tracking code joshrelay-20
-  const testUrl = "https://www.amazon.com/dp/B0D54JZTHY?ie=UTF8&ascsubtag=ece153f2c15f11f0b1d116eaf46a85e10INT&m=ATVPDKIKX0DER&psc=1&linkCode=ll1&tag=joshrelay-20&linkId=d16cf26f35763756f216ffae44618c7f&language=en_US&ref_=as_li_ss_tl";
+  // Black Friday Deal - Massage Gun with tracking code joshrelay-20
+  const testUrl = "https://www.amazon.com/CAMEFER-Portable-Percussion-Massagers-Attachments/dp/B0FGWM5W1C/ref=sr_1_4_sspa?dib=eyJ2IjoiMSJ9.Wb-130ZotcD0eHHCASLoIT8tWqQq4dNZi1iOF1xIplnA1gNNA_imMxFwuIdAYQhSVkHe1sK4OQxPkfdnHOIa93pVa9JfASEfPq7PqF2PB8ZBIhp_9M6Nm5ap12vzh2Qqy84BqNjCeGejYRaDUHff08XNlV5p9SFnPeTwdG6BgQuzLpeiEJlY9y3NhGaJTabCd6iw2gR6RwpnFRDvdVo6oMg2Eq6g95B3qdP5HdID2r0FPiGqlb2N23BqNfqqkJu1lV5LKMReFphmXbcKUHbmgxgoPb7Xmqgg2MZOUhPR3pI.fUTScfSUz8UBpV7P9iqlcX17y4BtYW402IWUbRHiBRs&dib_tag=se&keywords=massager&qid=1764084001&sr=8-4-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1&tag=joshrelay-20";
 
   const handleTestClick = async () => {
     await trackClick({
-      dealId: "test-deal-b0d54jzthy",
+      dealId: "black-friday-massage-gun-b0fgwm5w1c",
       targetUrl: testUrl,
     });
   };
@@ -48,7 +48,7 @@ const Index = () => {
                     Tag: joshrelay-20
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Product: B0D54JZTHY
+                    Product: Massage Gun (B0FGWM5W1C) - Black Friday Deal
                   </p>
                 </div>
                 
@@ -63,7 +63,7 @@ const Index = () => {
                     rel="noopener noreferrer nofollow"
                     onClick={handleTestClick}
                   >
-                    Test Amazon Link
+                    View Black Friday Deal
                     <ExternalLink className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
