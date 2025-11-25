@@ -75,13 +75,13 @@ const Auth = () => {
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        navigate("/deals");
+        navigate("/apply");
       }
     });
   }, [navigate]);
 
   const handleSignUp = async (values: SignUpFormValues) => {
-    const redirectUrl = `${window.location.origin}/deals`;
+    const redirectUrl = `${window.location.origin}/apply`;
     
     const { error } = await supabase.auth.signUp({
       email: values.email.trim(),
@@ -100,9 +100,9 @@ const Auth = () => {
     } else {
       toast({
         title: "Success",
-        description: "Account created! Please check your email to confirm.",
+        description: "Account created successfully!",
       });
-      signUpForm.reset();
+      navigate("/apply");
     }
   };
 
@@ -123,7 +123,7 @@ const Auth = () => {
         title: "Success",
         description: "Signed in successfully!",
       });
-      navigate("/deals");
+      navigate("/apply");
     }
   };
 
@@ -131,8 +131,8 @@ const Auth = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Welcome</CardTitle>
-          <CardDescription>Sign in or create an account to comment on deals</CardDescription>
+          <CardTitle>Welcome to Relay Station</CardTitle>
+          <CardDescription>Sign up to start earning with your community</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
