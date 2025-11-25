@@ -19,6 +19,8 @@ import ProjectDeals from "./pages/ProjectDeals";
 import ProjectSocial from "./pages/ProjectSocial";
 import LogoEditor from "./pages/LogoEditor";
 import Projects from "./pages/Projects";
+import ApplicationForm from "./pages/ApplicationForm";
+import ApplicationPending from "./pages/ApplicationPending";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ const App = () => (
             <Route path="/deals" element={<Deals />} />
             <Route path="/deal/:id" element={<DealLanding />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/apply" element={<ApplicationForm />} />
+            <Route path="/application-pending" element={<ApplicationPending />} />
             <Route path="/test12345/sociallinks" element={<Test12345SocialLinks />} />
             <Route path="/social-links-generator" element={<SocialLinksGenerator />} />
             <Route path="/admin" element={<Admin />} />
