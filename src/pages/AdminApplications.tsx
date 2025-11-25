@@ -6,7 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Code } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Application {
   id: string;
@@ -24,6 +27,9 @@ const AdminApplications = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [amazonCode, setAmazonCode] = useState("");
+  const [isCodeDialogOpen, setIsCodeDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -71,24 +77,53 @@ const AdminApplications = () => {
     setLoading(false);
   };
 
-  const handleApprove = async (projectId: string) => {
-    const { error } = await supabase
-      .from("projects")
-      .update({ is_active: true })
-      .eq("id", projectId);
+  const handleOpenCodeDialog = (app: Application) => {
+    setSelectedApp(app);
+    setAmazonCode("");
+    setIsCodeDialogOpen(true);
+  };
 
-    if (error) {
+  const handleApproveWithCode = async () => {
+    if (!selectedApp || !amazonCode.trim()) {
       toast({
         title: "Error",
-        description: "Failed to approve application",
+        description: "Please enter an Amazon tracking code",
         variant: "destructive",
       });
-    } else {
+      return;
+    }
+
+    try {
+      // Generate slug from name
+      const slug = selectedApp.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      
+      // Update project with Amazon code, slug, and activate it
+      const { error } = await supabase
+        .from("projects")
+        .update({ 
+          tracking_code: amazonCode,
+          slug: slug,
+          is_active: true 
+        })
+        .eq("id", selectedApp.id);
+
+      if (error) throw error;
+
       toast({
         title: "Success",
-        description: "Application approved successfully",
+        description: `Project activated! Site available at: /project/${slug}/deals`,
       });
+
+      setIsCodeDialogOpen(false);
+      setSelectedApp(null);
+      setAmazonCode("");
       loadApplications();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to approve application",
+        variant: "destructive",
+      });
     }
   };
 
@@ -195,11 +230,11 @@ const AdminApplications = () => {
                   <CardContent>
                     <div className="flex gap-2">
                       <Button 
-                        onClick={() => handleApprove(app.id)}
+                        onClick={() => handleOpenCodeDialog(app)}
                         className="flex-1"
                       >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Approve
+                        <Code className="mr-2 h-4 w-4" />
+                        Add Amazon Code
                       </Button>
                       <Button 
                         onClick={() => handleReject(app.id)}
@@ -249,6 +284,51 @@ const AdminApplications = () => {
             </div>
           </div>
         )}
+
+        <Dialog open={isCodeDialogOpen} onOpenChange={setIsCodeDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Amazon Tracking Code</DialogTitle>
+              <DialogDescription>
+                Enter the Amazon Associates tracking code for {selectedApp?.name}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="amazonCode">Amazon Tracking Code</Label>
+                <Input
+                  id="amazonCode"
+                  value={amazonCode}
+                  onChange={(e) => setAmazonCode(e.target.value)}
+                  placeholder="example-20"
+                />
+                <p className="text-sm text-muted-foreground">
+                  This will be used for all affiliate links on their site
+                </p>
+              </div>
+
+              {selectedApp && (
+                <div className="rounded-lg bg-muted p-4 space-y-2">
+                  <p className="text-sm font-medium">Site URL Preview:</p>
+                  <code className="text-xs">
+                    /project/{selectedApp.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/deals
+                  </code>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCodeDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleApproveWithCode}>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Approve & Create Site
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

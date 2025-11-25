@@ -82,10 +82,7 @@ const ApplicationForm = () => {
         .from('project-logos')
         .getPublicUrl(fileName);
 
-      // Generate a unique tracking code
-      const trackingCode = `${formData.companyName.toLowerCase().replace(/\s+/g, '-')}-${Date.now().toString(36)}`;
-
-      // Create project application
+      // Create project application with pending tracking code
       const { error: insertError } = await supabase
         .from('projects')
         .insert({
@@ -93,7 +90,7 @@ const ApplicationForm = () => {
           description: `${formData.description}\n\nCommunity Type: ${formData.communityType}\nCommunity Size: ${formData.communitySize}\nWebsite: ${formData.website}`,
           logo_url: publicUrl,
           created_by: userId,
-          tracking_code: trackingCode,
+          tracking_code: 'pending-admin-review',
           is_active: false, // Pending approval
         });
 
