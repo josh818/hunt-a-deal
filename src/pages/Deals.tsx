@@ -11,6 +11,7 @@ import { Deal } from "@/types/deal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { getDefaultTrackingCode } from "@/utils/trackingCode";
 
 const fetchDeals = async (): Promise<Deal[]> => {
   // Fetch deals from our database cache
@@ -46,7 +47,7 @@ const fetchDeals = async (): Promise<Deal[]> => {
 
 const Deals = () => {
   const [trackingCode, setTrackingCode] = useState(() => {
-    return localStorage.getItem("affiliateTrackingCode") || "your-tag-20";
+    return localStorage.getItem("affiliateTrackingCode") || getDefaultTrackingCode();
   });
 
   const [filters, setFilters] = useState<Filters>(() => {
