@@ -22,6 +22,7 @@ const ApplicationForm = () => {
     website: "",
     communitySize: "",
     communityType: "",
+    whatsappNumber: "",
   });
 
   useEffect(() => {
@@ -92,6 +93,7 @@ const ApplicationForm = () => {
           created_by: userId,
           tracking_code: 'pending-admin-review',
           is_active: false, // Pending approval
+          whatsapp_number: formData.whatsappNumber,
         });
 
       if (insertError) throw insertError;
@@ -185,6 +187,21 @@ const ApplicationForm = () => {
                   onChange={handleInputChange}
                   placeholder="https://..."
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="whatsappNumber">WhatsApp Number *</Label>
+                <Input
+                  id="whatsappNumber"
+                  name="whatsappNumber"
+                  value={formData.whatsappNumber}
+                  onChange={handleInputChange}
+                  placeholder="+1234567890"
+                  required
+                />
+                <p className="text-sm text-muted-foreground">
+                  Include country code (e.g., +1 for US)
+                </p>
               </div>
 
               <div className="space-y-2">
