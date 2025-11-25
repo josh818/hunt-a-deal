@@ -20,6 +20,7 @@ interface Application {
   is_active: boolean;
   created_at: string;
   created_by: string;
+  whatsapp_number: string | null;
 }
 
 const AdminApplications = () => {
@@ -219,6 +220,11 @@ const AdminApplications = () => {
                           <CardDescription className="mt-2">
                             {app.description}
                           </CardDescription>
+                          {app.whatsapp_number && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              WhatsApp: {app.whatsapp_number}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <Badge variant="secondary">
@@ -271,6 +277,11 @@ const AdminApplications = () => {
                         <div>
                           <CardTitle className="text-lg">{app.name}</CardTitle>
                           <code className="text-xs text-muted-foreground">{app.tracking_code}</code>
+                          {app.whatsapp_number && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              WhatsApp: {app.whatsapp_number}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <Badge variant="default">

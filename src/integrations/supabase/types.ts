@@ -261,6 +261,7 @@ export type Database = {
           slug: string | null
           tracking_code: string
           updated_at: string | null
+          whatsapp_number: string | null
         }
         Insert: {
           created_at?: string | null
@@ -273,6 +274,7 @@ export type Database = {
           slug?: string | null
           tracking_code: string
           updated_at?: string | null
+          whatsapp_number?: string | null
         }
         Update: {
           created_at?: string | null
@@ -285,6 +287,7 @@ export type Database = {
           slug?: string | null
           tracking_code?: string
           updated_at?: string | null
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
