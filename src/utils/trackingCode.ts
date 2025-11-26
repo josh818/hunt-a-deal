@@ -1,6 +1,6 @@
 // Utility functions for Amazon tracking code management
 
-const TRACKING_CODE = "relaystation1-20";
+const TRACKING_CODE = "joshrelay-20";
 
 /**
  * Replaces or adds Amazon affiliate tracking code to a URL
