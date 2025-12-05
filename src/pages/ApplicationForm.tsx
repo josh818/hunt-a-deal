@@ -83,19 +83,48 @@ const ApplicationForm = () => {
         .from('project-logos')
         .getPublicUrl(fileName);
 
-      // Create project application with unique pending tracking code
-      const uniqueTrackingCode = `pending-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-      const { error: insertError } = await supabase
-        .from('projects')
-        .insert({
-          name: formData.companyName,
-          description: `${formData.description}\n\nCommunity Type: ${formData.communityType}\nCommunity Size: ${formData.communitySize}\nWebsite: ${formData.website}`,
-          logo_url: publicUrl,
-          created_by: userId,
-          tracking_code: uniqueTrackingCode,
-          is_active: false, // Pending approval
-          whatsapp_number: formData.whatsappNumber,
-        });
+      // Generate a highly unique tracking code using crypto
+      const generateUniqueTrackingCode = () => {
+        const timestamp = Date.now().toString(36);
+        const randomPart1 = Math.random().toString(36).substring(2, 10);
+        const randomPart2 = Math.random().toString(36).substring(2, 10);
+        return `pending-${timestamp}-${randomPart1}${randomPart2}`;
+      };
+
+      // Try to insert with retry logic for the rare case of collision
+      let insertError: any = null;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        const uniqueTrackingCode = generateUniqueTrackingCode();
+        const { error } = await supabase
+          .from('projects')
+          .insert({
+            name: formData.companyName,
+            description: `${formData.description}\n\nCommunity Type: ${formData.communityType}\nCommunity Size: ${formData.communitySize}\nWebsite: ${formData.website}`,
+            logo_url: publicUrl,
+            created_by: userId,
+            tracking_code: uniqueTrackingCode,
+            is_active: false, // Pending approval
+            whatsapp_number: formData.whatsappNumber,
+          });
+
+        if (!error) {
+          insertError = null;
+          break;
+        }
+
+        // If it's a duplicate key error, retry with a new code
+        if (error.code === '23505' && error.message.includes('tracking_code')) {
+          attempts++;
+          insertError = error;
+          continue;
+        }
+
+        // For other errors, throw immediately
+        throw error;
+      }
 
       if (insertError) throw insertError;
 
