@@ -23,6 +23,42 @@ interface Application {
   whatsapp_number: string | null;
 }
 
+const sendApplicationEmail = async (
+  userId: string,
+  type: "approved" | "rejected",
+  projectName: string,
+  projectSlug?: string
+) => {
+  try {
+    // Get user email from profiles
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .single();
+
+    if (!profile?.email) {
+      console.log("No email found for user");
+      return;
+    }
+
+    const { error } = await supabase.functions.invoke("send-application-email", {
+      body: {
+        to: profile.email,
+        type,
+        projectName,
+        projectSlug,
+      },
+    });
+
+    if (error) {
+      console.error("Failed to send email:", error);
+    }
+  } catch (error) {
+    console.error("Error sending email notification:", error);
+  }
+};
+
 const AdminApplications = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -110,6 +146,9 @@ const AdminApplications = () => {
 
       if (error) throw error;
 
+      // Send approval email notification
+      await sendApplicationEmail(selectedApp.created_by, "approved", selectedApp.name, slug);
+
       toast({
         title: "Success",
         description: `Project activated! Site available at: /project/${slug}/deals`,
@@ -128,11 +167,14 @@ const AdminApplications = () => {
     }
   };
 
-  const handleReject = async (projectId: string) => {
+  const handleReject = async (app: Application) => {
+    // Send rejection email before deleting
+    await sendApplicationEmail(app.created_by, "rejected", app.name);
+
     const { error } = await supabase
       .from("projects")
       .delete()
-      .eq("id", projectId);
+      .eq("id", app.id);
 
     if (error) {
       toast({
@@ -143,7 +185,7 @@ const AdminApplications = () => {
     } else {
       toast({
         title: "Success",
-        description: "Application rejected",
+        description: "Application rejected and notification sent",
       });
       loadApplications();
     }
@@ -243,7 +285,7 @@ const AdminApplications = () => {
                         Add Amazon Code
                       </Button>
                       <Button 
-                        onClick={() => handleReject(app.id)}
+                        onClick={() => handleReject(app)}
                         variant="destructive"
                         className="flex-1"
                       >
