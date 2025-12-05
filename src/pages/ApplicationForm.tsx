@@ -83,7 +83,8 @@ const ApplicationForm = () => {
         .from('project-logos')
         .getPublicUrl(fileName);
 
-      // Create project application with pending tracking code
+      // Create project application with unique pending tracking code
+      const uniqueTrackingCode = `pending-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
       const { error: insertError } = await supabase
         .from('projects')
         .insert({
@@ -91,7 +92,7 @@ const ApplicationForm = () => {
           description: `${formData.description}\n\nCommunity Type: ${formData.communityType}\nCommunity Size: ${formData.communitySize}\nWebsite: ${formData.website}`,
           logo_url: publicUrl,
           created_by: userId,
-          tracking_code: 'pending-admin-review',
+          tracking_code: uniqueTrackingCode,
           is_active: false, // Pending approval
           whatsapp_number: formData.whatsappNumber,
         });
