@@ -19,8 +19,8 @@ const Index = () => {
               🎉 Free for Your First 3 Months
             </Badge>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
-              Turn Your Community Into{" "}
-              <span className="text-primary">Passive Income</span>
+              Your Community Is Already Buying—{" "}
+              <span className="text-primary">Start Earning From It</span>
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
               We share the deals. You share with your WhatsApp groups. 
