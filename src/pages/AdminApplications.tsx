@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, Code } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Code, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Footer } from "@/components/Footer";
 
 interface Application {
   id: string;
@@ -193,10 +194,10 @@ const AdminApplications = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <AdminNavigation />
-        <div className="container mx-auto px-4 py-12">
-          <p className="text-center text-muted-foreground">Loading...</p>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -206,10 +207,10 @@ const AdminApplications = () => {
   const activeStores = applications.filter(app => app.is_active);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <AdminNavigation />
       
-      <div className="container mx-auto px-4 py-12">
+      <div className="flex-1 container mx-auto px-4 py-8 sm:py-12">
         <h1 className="text-4xl font-bold mb-8">Application Management</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -383,6 +384,7 @@ const AdminApplications = () => {
           </DialogContent>
         </Dialog>
       </div>
+      <Footer />
     </div>
   );
 };
