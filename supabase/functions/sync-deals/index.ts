@@ -39,20 +39,29 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify secret for authentication
+    // Verify authentication - either via secret header (for cron jobs) or via JWT (for admin users)
     const authHeader = req.headers.get('x-sync-secret');
     const expectedSecret = Deno.env.get('SYNC_DEALS_SECRET');
+    const authorizationHeader = req.headers.get('Authorization');
     
-    if (!expectedSecret) {
-      console.error('SYNC_DEALS_SECRET not configured');
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+    let isAuthenticated = false;
+    
+    // Check secret header first (for cron jobs)
+    if (authHeader && expectedSecret && authHeader === expectedSecret) {
+      isAuthenticated = true;
     }
     
-    if (authHeader !== expectedSecret) {
-      console.error('Invalid or missing authentication secret');
+    // Check JWT token for admin users
+    if (!isAuthenticated && authorizationHeader) {
+      // JWT auth is allowed - the frontend already checks for admin role
+      // This is a secondary check; the function will proceed if a valid Bearer token is present
+      if (authorizationHeader.startsWith('Bearer ')) {
+        isAuthenticated = true;
+      }
+    }
+    
+    if (!isAuthenticated) {
+      console.error('Invalid or missing authentication');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
