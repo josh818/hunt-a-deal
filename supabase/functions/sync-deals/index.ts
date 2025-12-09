@@ -49,14 +49,31 @@ Deno.serve(async (req) => {
     // Check secret header first (for cron jobs)
     if (authHeader && expectedSecret && authHeader === expectedSecret) {
       isAuthenticated = true;
+      console.log('Authenticated via secret header');
     }
     
-    // Check JWT token for admin users
-    if (!isAuthenticated && authorizationHeader) {
-      // JWT auth is allowed - the frontend already checks for admin role
-      // This is a secondary check; the function will proceed if a valid Bearer token is present
-      if (authorizationHeader.startsWith('Bearer ')) {
-        isAuthenticated = true;
+    // Check JWT token for admin users - validate with Supabase
+    if (!isAuthenticated && authorizationHeader?.startsWith('Bearer ')) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      
+      const token = authorizationHeader.replace('Bearer ', '');
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      
+      if (user && !error) {
+        // Check if user is admin
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .single();
+        
+        if (roles) {
+          isAuthenticated = true;
+          console.log('Authenticated via JWT - admin user:', user.email);
+        }
       }
     }
     
