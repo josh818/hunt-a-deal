@@ -97,7 +97,7 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
             </Badge>
           )}
         </div>
-        {deal.category && (
+        {deal.category && deal.category !== "Amazon" && (
           <div className="absolute left-2 top-2">
             <Badge variant="secondary" className="text-xs">
               {deal.category}

@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Trash2, Eye, AlertCircle, Copy, CheckCircle, BarChart } from "lucide-react";
+import { Plus, Trash2, Eye, AlertCircle, Copy, CheckCircle, BarChart, RefreshCw, Users, ShoppingBag, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -46,6 +46,7 @@ const Admin = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [syncingDeals, setSyncingDeals] = useState(false);
   const [newProject, setNewProject] = useState({
     name: "",
     slug: "",
@@ -109,6 +110,50 @@ const Admin = () => {
     },
     enabled: isAdmin === true,
   });
+
+  // Fetch deals count
+  const { data: dealsCount } = useQuery({
+    queryKey: ['dealsCount'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('deals')
+        .select('*', { count: 'exact', head: true });
+
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: isAdmin === true,
+  });
+
+  // Sync deals function
+  const handleSyncDeals = async () => {
+    setSyncingDeals(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await supabase.functions.invoke('sync-deals', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to sync deals');
+      }
+
+      toast.success(`Successfully synced ${response.data?.count || 0} deals!`);
+      queryClient.invalidateQueries({ queryKey: ['dealsCount'] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      toast.error(error.message || 'Failed to sync deals');
+    } finally {
+      setSyncingDeals(false);
+    }
+  };
 
   // Create project mutation
   const createProject = useMutation({
@@ -206,7 +251,41 @@ const Admin = () => {
       <Navigation />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Deals</CardTitle>
+              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dealsCount || 0}</div>
+              <p className="text-xs text-muted-foreground">Currently available deals</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Clicks</CardTitle>
+              <BarChart className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{analytics?.length || 0}</div>
+              <p className="text-xs text-muted-foreground">Last 100 tracked clicks</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{projects?.filter(p => p.is_active).length || 0}</div>
+              <p className="text-xs text-muted-foreground">Approved partner projects</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold">Admin Dashboard</h1>
             <p className="text-muted-foreground mt-1">
@@ -214,7 +293,22 @@ const Admin = () => {
             </p>
           </div>
 
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSyncDeals}
+              disabled={syncingDeals}
+              className="gap-2"
+            >
+              {syncingDeals ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {syncingDeals ? "Syncing..." : "Refresh Deals"}
+            </Button>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -308,7 +402,8 @@ const Admin = () => {
                 </Button>
               </div>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {isLoading ? (

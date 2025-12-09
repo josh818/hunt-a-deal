@@ -168,6 +168,33 @@ Deno.serve(async (req) => {
         }
       };
 
+      // Extract category from title using keyword matching
+      const extractCategory = (title?: string): string => {
+        if (!title) return "Other";
+        const titleLower = title.toLowerCase();
+        
+        // Category keyword mappings
+        const categories: Record<string, string[]> = {
+          "Electronics": ["laptop", "computer", "tablet", "phone", "headphone", "speaker", "camera", "monitor", "keyboard", "mouse", "charger", "cable", "usb", "wireless", "bluetooth", "gaming", "console", "controller", "tv", "television", "audio", "video", "hdmi", "adapter", "power bank", "dash cam", "dumbbell", "switch"],
+          "Home & Kitchen": ["kitchen", "cookware", "appliance", "blender", "mixer", "coffee", "toaster", "microwave", "vacuum", "cleaning", "storage", "organizer", "furniture", "chair", "table", "desk", "bed", "mattress", "pillow", "blanket", "towel", "curtain", "lamp", "light", "fan", "heater", "air purifier", "dehumidifier", "humidifier", "wok", "pan", "pot", "dishwasher", "detergent", "pods", "bench", "cubes", "foldable"],
+          "Beauty & Personal Care": ["beauty", "skincare", "makeup", "cosmetic", "shampoo", "conditioner", "lotion", "cream", "serum", "perfume", "cologne", "razor", "brush", "hair", "nail", "toothbrush", "toothpaste", "probiotic", "supplement", "vitamin", "sonicare"],
+          "Fashion": ["shirt", "pants", "dress", "jacket", "coat", "shoe", "sneaker", "boot", "hat", "cap", "bag", "purse", "wallet", "watch", "jewelry", "sunglasses", "belt", "sock", "underwear", "t-shirt", "crewneck", "women's", "men's"],
+          "Toys & Games": ["toy", "game", "puzzle", "lego", "doll", "action figure", "board game", "card game", "remote control", "rc", "kids", "children", "baby", "tablet", "doodle", "kit"],
+          "Books & Media": ["book", "novel", "textbook", "magazine", "dvd", "blu-ray", "cd", "vinyl", "movie", "film", "4k ultra", "edition"],
+          "Sports & Outdoors": ["sports", "fitness", "exercise", "yoga", "camping", "hiking", "bicycle", "bike", "golf", "tennis", "basketball", "football", "soccer", "swimming", "outdoor", "garden", "patio", "grill", "bbq", "propane"],
+          "Pet Supplies": ["pet", "dog", "cat", "fish", "bird", "aquarium", "leash", "collar", "food", "treat", "toy"],
+          "Office Supplies": ["office", "paper", "pen", "pencil", "stapler", "tape", "folder", "binder", "notebook", "printer", "ink", "packaging", "scotch", "heavy duty"],
+          "Health & Wellness": ["health", "medical", "first aid", "thermometer", "blood pressure", "massage", "therapy", "probiotic", "supplement"],
+        };
+        
+        for (const [category, keywords] of Object.entries(categories)) {
+          if (keywords.some(keyword => titleLower.includes(keyword))) {
+            return category;
+          }
+        }
+        return "Other";
+      };
+
       return {
         id: `deal-${Date.now()}-${index}`,
         title: item.title || "Product",
@@ -177,10 +204,10 @@ Deno.serve(async (req) => {
         discount: discount,
         image_url: getImageUrl(item.url, item.image, item.title),
         product_url: item.url || "",
-        category: item.category || item.store || null,
+        category: extractCategory(item.title),
         rating: item.rating ? parseFloat(String(item.rating)) : null,
         review_count: item.reviewCount || item.reviews || null,
-        brand: item.brand || item.store || null,
+        brand: item.brand || null,
         in_stock: item.inStock !== false,
         coupon_code: item.coupon_code || item.couponCode || null,
         posted_at: parsePostedAt(item.timestamp),
