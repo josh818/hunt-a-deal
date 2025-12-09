@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/FileUpload";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PublicNavigation } from "@/components/PublicNavigation";
 import { Footer } from "@/components/Footer";
@@ -36,7 +36,7 @@ const ApplicationForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [checkingExisting, setCheckingExisting] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [existingApplication, setExistingApplication] = useState<{ name: string; is_active: boolean } | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -52,24 +52,38 @@ const ApplicationForm = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-      } else {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          navigate("/auth");
+          return;
+        }
+        
         setUserId(user.id);
+        
         // Check if user already has an application
-        const { data: existingProjects } = await supabase
+        const { data: existingProjects, error } = await supabase
           .from('projects')
           .select('name, is_active')
           .eq('created_by', user.id)
           .limit(1);
         
+        if (error) {
+          console.error("Error checking existing projects:", error);
+        }
+        
         if (existingProjects && existingProjects.length > 0) {
           setExistingApplication(existingProjects[0]);
         }
-        setCheckingExisting(false);
+      } catch (error) {
+        console.error("Auth check error:", error);
+        navigate("/auth");
+      } finally {
+        setCheckingAuth(false);
       }
     };
+    
     checkAuth();
   }, [navigate]);
 
@@ -101,6 +115,7 @@ const ApplicationForm = () => {
         description: "You must be logged in to submit an application",
         variant: "destructive",
       });
+      navigate("/auth");
       return;
     }
 
@@ -117,7 +132,7 @@ const ApplicationForm = () => {
 
     if (!trimmedName || !trimmedDescription || !formData.communityType || !trimmedCommunitySize || !trimmedWhatsApp) {
       toast({
-        title: "Error",
+        title: "Missing Information",
         description: "Please fill in all required fields",
         variant: "destructive",
       });
@@ -126,7 +141,7 @@ const ApplicationForm = () => {
 
     if (formData.communityType === "other" && !formData.otherCommunityType.trim()) {
       toast({
-        title: "Error",
+        title: "Missing Information",
         description: "Please specify your organization type",
         variant: "destructive",
       });
@@ -145,11 +160,10 @@ const ApplicationForm = () => {
 
       if (existingCheck && existingCheck.length > 0) {
         toast({
-          title: "Application Already Exists",
-          description: "You already have a pending or approved application. Please contact support if you need to make changes.",
-          variant: "destructive",
+          title: "Application Exists",
+          description: "You already have an application. Redirecting to your dashboard.",
         });
-        setLoading(false);
+        navigate("/dashboard");
         return;
       }
 
@@ -170,23 +184,27 @@ const ApplicationForm = () => {
 
         if (uploadError) {
           console.error("Upload error:", uploadError);
-          throw new Error("Failed to upload logo. Please try again.");
+          // Don't fail the entire submission for logo upload issues
+          toast({
+            title: "Logo Upload Failed",
+            description: "Your application will be submitted without a logo. You can add one later.",
+          });
+        } else {
+          // Get public URL for the logo
+          const { data: urlData } = supabase.storage
+            .from('project-logos')
+            .getPublicUrl(fileName);
+          
+          publicUrl = urlData.publicUrl;
         }
-
-        // Get public URL for the logo
-        const { data: urlData } = supabase.storage
-          .from('project-logos')
-          .getPublicUrl(fileName);
-        
-        publicUrl = urlData.publicUrl;
       }
 
       // Try to insert with retry logic for the rare case of collision
-      let insertError: any = null;
+      let insertSuccess = false;
       let attempts = 0;
       const maxAttempts = 5;
 
-      while (attempts < maxAttempts) {
+      while (!insertSuccess && attempts < maxAttempts) {
         const uniqueTrackingCode = generateUniqueTrackingCode();
         const { error } = await supabase
           .from('projects')
@@ -201,43 +219,37 @@ const ApplicationForm = () => {
           });
 
         if (!error) {
-          insertError = null;
+          insertSuccess = true;
           break;
         }
 
         // If it's a duplicate key error on tracking_code, retry with a new code
         if (error.code === '23505' && error.message.includes('tracking_code')) {
           attempts++;
-          insertError = error;
-          // Small delay before retry
           await new Promise(resolve => setTimeout(resolve, 100));
           continue;
         }
 
-        // For other errors, throw immediately with better message
+        // For other errors, throw immediately
         console.error("Insert error:", error);
-        if (error.code === '23505') {
-          throw new Error("An application already exists. Please refresh the page.");
-        }
         throw new Error(error.message || "Failed to submit application");
       }
 
-      if (insertError) {
+      if (!insertSuccess) {
         throw new Error("Failed to generate unique application ID. Please try again.");
       }
 
       toast({
-        title: "Success!",
-        description: "Your application has been submitted. We'll review it and get back to you soon!",
+        title: "Application Submitted!",
+        description: "We'll review your application and contact you within 1-2 business days.",
       });
 
-      // Redirect to a success/pending page
       navigate("/application-pending");
     } catch (error: any) {
       console.error("Error submitting application:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to submit application. Please try again.",
+        title: "Submission Failed",
+        description: error.message || "Please try again or contact support.",
         variant: "destructive",
       });
     } finally {
@@ -245,11 +257,11 @@ const ApplicationForm = () => {
     }
   };
 
-  if (checkingExisting) {
+  if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <PublicNavigation />
-        <div className="flex items-center justify-center py-20">
+        <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
@@ -258,38 +270,44 @@ const ApplicationForm = () => {
 
   if (existingApplication) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         <PublicNavigation />
-        <div className="container mx-auto px-4 py-12">
-          <div className="max-w-2xl mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl sm:text-3xl">Application Already Submitted</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    You already have an application for <strong>{existingApplication.name}</strong>.
-                    {existingApplication.is_active 
-                      ? " Your application has been approved! You can access your dashboard."
-                      : " Your application is currently under review. We'll contact you within 1-2 business days."
-                    }
-                  </AlertDescription>
-                </Alert>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button onClick={() => navigate("/")} variant="outline" className="flex-1">
-                    Go Home
-                  </Button>
-                  {existingApplication.is_active && (
-                    <Button onClick={() => navigate("/dashboard")} className="flex-1">
-                      Go to Dashboard
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="max-w-lg w-full">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                {existingApplication.is_active ? (
+                  <CheckCircle2 className="w-8 h-8 text-primary" />
+                ) : (
+                  <AlertCircle className="w-8 h-8 text-primary" />
+                )}
+              </div>
+              <CardTitle className="text-2xl">
+                {existingApplication.is_active ? "Your Store is Active!" : "Application Under Review"}
+              </CardTitle>
+              <CardDescription>
+                {existingApplication.name}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <AlertDescription>
+                  {existingApplication.is_active 
+                    ? "Your store is live and ready to earn! Access your dashboard to view deals and track earnings."
+                    : "Your application is being reviewed by our team. We'll contact you within 1-2 business days."
+                  }
+                </AlertDescription>
+              </Alert>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button onClick={() => navigate("/")} variant="outline" className="flex-1">
+                  Go Home
+                </Button>
+                <Button onClick={() => navigate("/dashboard")} className="flex-1">
+                  {existingApplication.is_active ? "Go to Dashboard" : "Check Status"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         <Footer />
       </div>
@@ -297,9 +315,9 @@ const ApplicationForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <PublicNavigation />
-      <div className="container mx-auto px-4 py-8 sm:py-12">
+      <div className="flex-1 container mx-auto px-4 py-8 sm:py-12">
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>

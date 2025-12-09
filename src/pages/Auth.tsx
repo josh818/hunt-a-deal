@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PublicNavigation } from "@/components/PublicNavigation";
@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 
 const signInSchema = z.object({
   email: z
@@ -56,6 +57,7 @@ type SignUpFormValues = z.infer<typeof signUpSchema>;
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const signInForm = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
@@ -73,18 +75,53 @@ const Auth = () => {
     },
   });
 
+  // Check for existing user and redirect appropriately
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        navigate("/apply");
+    const checkAuthAndRedirect = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Check if user has a project
+          const { data: projects } = await supabase
+            .from('projects')
+            .select('id, is_active')
+            .eq('created_by', user.id)
+            .limit(1);
+
+          // Check if user is admin
+          const { data: roles } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .eq('role', 'admin')
+            .single();
+
+          if (roles) {
+            // Admin goes to admin dashboard
+            navigate("/admin");
+          } else if (projects && projects.length > 0) {
+            // User has a project - go to dashboard
+            navigate("/dashboard");
+          } else {
+            // New user - go to application form
+            navigate("/apply");
+          }
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+      } finally {
+        setCheckingAuth(false);
       }
-    });
+    };
+
+    checkAuthAndRedirect();
   }, [navigate]);
 
   const handleSignUp = async (values: SignUpFormValues) => {
     const redirectUrl = `${window.location.origin}/apply`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: values.email.trim(),
       password: values.password,
       options: {
@@ -93,40 +130,80 @@ const Auth = () => {
     });
 
     if (error) {
+      let message = error.message;
+      if (error.message.includes("already registered")) {
+        message = "This email is already registered. Please sign in instead.";
+      }
       toast({
         title: "Error",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
-    } else {
+    } else if (data.user) {
       toast({
-        title: "Success",
-        description: "Account created successfully!",
+        title: "Account Created!",
+        description: "Welcome to Relay Station! Let's set up your store.",
       });
       navigate("/apply");
     }
   };
 
   const handleSignIn = async (values: SignInFormValues) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: values.email.trim(),
       password: values.password,
     });
 
     if (error) {
+      let message = error.message;
+      if (error.message.includes("Invalid login credentials")) {
+        message = "Invalid email or password. Please check your credentials and try again.";
+      }
       toast({
         title: "Error",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
-    } else {
+    } else if (data.user) {
+      // Check where to redirect
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('id, is_active')
+        .eq('created_by', data.user.id)
+        .limit(1);
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', data.user.id)
+        .eq('role', 'admin')
+        .single();
+
       toast({
-        title: "Success",
-        description: "Signed in successfully!",
+        title: "Welcome back!",
+        description: "Signed in successfully.",
       });
-      navigate("/apply");
+
+      if (roles) {
+        navigate("/admin");
+      } else if (projects && projects.length > 0) {
+        navigate("/dashboard");
+      } else {
+        navigate("/apply");
+      }
     }
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <PublicNavigation />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -138,51 +215,11 @@ const Auth = () => {
             <CardDescription>Sign up to start earning with your community</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
+            <Tabs defaultValue="signup" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                <TabsTrigger value="signin">Sign In</TabsTrigger>
               </TabsList>
-              
-              <TabsContent value="signin">
-                <Form {...signInForm}>
-                  <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-4">
-                    <FormField
-                      control={signInForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="Email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signInForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="Password" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={signInForm.formState.isSubmitting}
-                    >
-                      {signInForm.formState.isSubmitting ? "Signing in..." : "Sign In"}
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
               
               <TabsContent value="signup">
                 <Form {...signUpForm}>
@@ -194,7 +231,7 @@ const Auth = () => {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="Email" {...field} />
+                            <Input type="email" placeholder="you@example.com" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -222,7 +259,61 @@ const Auth = () => {
                       className="w-full"
                       disabled={signUpForm.formState.isSubmitting}
                     >
-                      {signUpForm.formState.isSubmitting ? "Creating account..." : "Sign Up"}
+                      {signUpForm.formState.isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating account...
+                        </>
+                      ) : (
+                        "Create Account"
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+
+              <TabsContent value="signin">
+                <Form {...signInForm}>
+                  <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-4">
+                    <FormField
+                      control={signInForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="you@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={signInForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Your password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={signInForm.formState.isSubmitting}
+                    >
+                      {signInForm.formState.isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Signing in...
+                        </>
+                      ) : (
+                        "Sign In"
+                      )}
                     </Button>
                   </form>
                 </Form>
