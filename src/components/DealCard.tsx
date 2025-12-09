@@ -55,7 +55,7 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
   };
 
   return (
-    <Card className="group overflow-hidden transition-all hover:shadow-lg">
+    <Card className="group overflow-hidden transition-all hover:shadow-lg flex flex-col h-full">
       <div className="relative aspect-square overflow-hidden bg-muted">
         {!imageLoaded && !imageError && (
           <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-muted via-muted-foreground/10 to-muted" />
@@ -97,6 +97,13 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
             </Badge>
           )}
         </div>
+        {deal.category && (
+          <div className="absolute left-2 top-2">
+            <Badge variant="secondary" className="text-xs">
+              {deal.category}
+            </Badge>
+          </div>
+        )}
         {deal.inStock === false && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/80">
             <Badge variant="destructive">Out of Stock</Badge>
@@ -104,7 +111,7 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
         )}
       </div>
       
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 flex-1 flex flex-col">
         {deal.brand && (
           <p className="text-sm font-medium text-muted-foreground">{deal.brand}</p>
         )}
@@ -154,10 +161,10 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
           *Prices may change at any time. Check current price on retailer's website.
         </p>
 
-        {savings && (
+        {savings && savings > 0 && deal.originalPrice && (
           <div className="rounded-lg bg-[hsl(var(--savings-bg))] px-3 py-2">
             <p className="text-sm font-semibold text-[hsl(var(--savings-text))]">
-              Save ${deal.originalPrice ? (deal.originalPrice - deal.price).toFixed(2) : '—'}
+              Save ${(deal.originalPrice - deal.price).toFixed(2)}
             </p>
           </div>
         )}
@@ -181,8 +188,11 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
           </div>
         )}
 
+        {/* Spacer to push button to bottom */}
+        <div className="flex-1" />
+
         <Button 
-          className="w-full" 
+          className="w-full mt-auto" 
           asChild
         >
           <a

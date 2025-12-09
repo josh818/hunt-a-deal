@@ -10,6 +10,27 @@ import { useToast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/FileUpload";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PublicNavigation } from "@/components/PublicNavigation";
+import { Footer } from "@/components/Footer";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const ORGANIZATION_TYPES = [
+  { value: "religious", label: "Religious Institution (Church, Mosque, Temple)" },
+  { value: "school", label: "School / Educational Institution" },
+  { value: "pta", label: "PTA / Parent Organization" },
+  { value: "nonprofit", label: "Nonprofit Organization" },
+  { value: "influencer", label: "Social Media Influencer" },
+  { value: "community", label: "Community Group / Club" },
+  { value: "sports", label: "Sports Team / League" },
+  { value: "business", label: "Small Business" },
+  { value: "other", label: "Other" },
+];
 
 const ApplicationForm = () => {
   const navigate = useNavigate();
@@ -25,6 +46,7 @@ const ApplicationForm = () => {
     website: "",
     communitySize: "",
     communityType: "",
+    otherCommunityType: "",
     whatsappNumber: "",
   });
 
@@ -85,11 +107,15 @@ const ApplicationForm = () => {
     // Validate required fields are not empty after trimming
     const trimmedName = formData.companyName.trim();
     const trimmedDescription = formData.description.trim();
-    const trimmedCommunityType = formData.communityType.trim();
     const trimmedCommunitySize = formData.communitySize.trim();
     const trimmedWhatsApp = formData.whatsappNumber.trim();
 
-    if (!trimmedName || !trimmedDescription || !trimmedCommunityType || !trimmedCommunitySize || !trimmedWhatsApp) {
+    // Get community type (use "other" value if selected)
+    const communityTypeValue = formData.communityType === "other" 
+      ? formData.otherCommunityType.trim() 
+      : ORGANIZATION_TYPES.find(t => t.value === formData.communityType)?.label || formData.communityType;
+
+    if (!trimmedName || !trimmedDescription || !formData.communityType || !trimmedCommunitySize || !trimmedWhatsApp) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -98,10 +124,10 @@ const ApplicationForm = () => {
       return;
     }
 
-    if (!logoFile) {
+    if (formData.communityType === "other" && !formData.otherCommunityType.trim()) {
       toast({
         title: "Error",
-        description: "Please upload a company logo",
+        description: "Please specify your organization type",
         variant: "destructive",
       });
       return;
@@ -127,27 +153,33 @@ const ApplicationForm = () => {
         return;
       }
 
-      // Upload logo to storage with unique filename
-      const fileExt = logoFile.name.split('.').pop()?.toLowerCase() || 'png';
-      const uniqueFileId = crypto.randomUUID();
-      const fileName = `${userId}/${uniqueFileId}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('project-logos')
-        .upload(fileName, logoFile, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      let publicUrl = null;
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        throw new Error("Failed to upload logo. Please try again.");
+      // Upload logo if provided (now optional)
+      if (logoFile) {
+        const fileExt = logoFile.name.split('.').pop()?.toLowerCase() || 'png';
+        const uniqueFileId = crypto.randomUUID();
+        const fileName = `${userId}/${uniqueFileId}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('project-logos')
+          .upload(fileName, logoFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          throw new Error("Failed to upload logo. Please try again.");
+        }
+
+        // Get public URL for the logo
+        const { data: urlData } = supabase.storage
+          .from('project-logos')
+          .getPublicUrl(fileName);
+        
+        publicUrl = urlData.publicUrl;
       }
-
-      // Get public URL for the logo
-      const { data: { publicUrl } } = supabase.storage
-        .from('project-logos')
-        .getPublicUrl(fileName);
 
       // Try to insert with retry logic for the rare case of collision
       let insertError: any = null;
@@ -160,7 +192,7 @@ const ApplicationForm = () => {
           .from('projects')
           .insert({
             name: trimmedName,
-            description: `${trimmedDescription}\n\nCommunity Type: ${trimmedCommunityType}\nCommunity Size: ${trimmedCommunitySize}\nWebsite: ${formData.website.trim() || 'Not provided'}`,
+            description: `${trimmedDescription}\n\nCommunity Type: ${communityTypeValue}\nCommunity Size: ${trimmedCommunitySize}\nWebsite: ${formData.website.trim() || 'Not provided'}`,
             logo_url: publicUrl,
             created_by: userId,
             tracking_code: uniqueTrackingCode,
@@ -215,180 +247,208 @@ const ApplicationForm = () => {
 
   if (checkingExisting) {
     return (
-      <div className="min-h-screen bg-background p-4 py-12 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background">
+        <PublicNavigation />
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
 
   if (existingApplication) {
     return (
-      <div className="min-h-screen bg-background p-4 py-12">
-        <div className="max-w-2xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-3xl">Application Already Submitted</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  You already have an application for <strong>{existingApplication.name}</strong>.
-                  {existingApplication.is_active 
-                    ? " Your application has been approved! You can access your dashboard."
-                    : " Your application is currently under review. We'll contact you within 1-2 business days."
-                  }
-                </AlertDescription>
-              </Alert>
-              <div className="flex gap-4">
-                <Button onClick={() => navigate("/")} variant="outline">
-                  Go Home
-                </Button>
-                {existingApplication.is_active && (
-                  <Button onClick={() => navigate("/dashboard")}>
-                    Go to Dashboard
+      <div className="min-h-screen bg-background">
+        <PublicNavigation />
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-2xl mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl sm:text-3xl">Application Already Submitted</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    You already have an application for <strong>{existingApplication.name}</strong>.
+                    {existingApplication.is_active 
+                      ? " Your application has been approved! You can access your dashboard."
+                      : " Your application is currently under review. We'll contact you within 1-2 business days."
+                    }
+                  </AlertDescription>
+                </Alert>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button onClick={() => navigate("/")} variant="outline" className="flex-1">
+                    Go Home
                   </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  {existingApplication.is_active && (
+                    <Button onClick={() => navigate("/dashboard")} className="flex-1">
+                      Go to Dashboard
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 py-12">
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-3xl">Join Relay Station</CardTitle>
-            <CardDescription>
-              Tell us about your community and start earning from deals shared with your audience
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="companyName">Organization/Community Name *</Label>
-                <Input
-                  id="companyName"
-                  name="companyName"
-                  value={formData.companyName}
-                  onChange={handleInputChange}
-                  placeholder="e.g., First Baptist Church, Lincoln High School"
-                  required
-                  maxLength={200}
-                />
-              </div>
+    <div className="min-h-screen bg-background">
+      <PublicNavigation />
+      <div className="container mx-auto px-4 py-8 sm:py-12">
+        <div className="max-w-2xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl sm:text-3xl">Join Relay Station</CardTitle>
+              <CardDescription className="text-base">
+                Tell us about your community and start earning from deals shared with your audience.
+                We'll post curated deals to your WhatsApp groups and you earn commissions on every purchase.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Organization/Community Name *</Label>
+                  <Input
+                    id="companyName"
+                    name="companyName"
+                    value={formData.companyName}
+                    onChange={handleInputChange}
+                    placeholder="e.g., First Baptist Church, Lincoln High School PTA"
+                    required
+                    maxLength={200}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="communityType">Type of Organization *</Label>
-                <Input
-                  id="communityType"
-                  name="communityType"
-                  value={formData.communityType}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Religious Institution, School, Influencer Community"
-                  required
-                  maxLength={100}
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="communityType">Type of Organization *</Label>
+                  <Select 
+                    value={formData.communityType} 
+                    onValueChange={(value) => setFormData({ ...formData, communityType: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your organization type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {ORGANIZATION_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.communityType === "other" && (
+                    <Input
+                      name="otherCommunityType"
+                      value={formData.otherCommunityType}
+                      onChange={handleInputChange}
+                      placeholder="Please specify your organization type"
+                      className="mt-2"
+                      maxLength={100}
+                    />
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="communitySize">Community Size *</Label>
-                <Input
-                  id="communitySize"
-                  name="communitySize"
-                  value={formData.communitySize}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 500 members, 10,000 followers"
-                  required
-                  maxLength={100}
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="communitySize">Community Size *</Label>
+                  <Input
+                    id="communitySize"
+                    name="communitySize"
+                    value={formData.communitySize}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 500 members, 10,000 followers"
+                    required
+                    maxLength={100}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Tell Us About Your Community *</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Describe your community, your mission, and how you plan to share deals with your audience..."
-                  rows={5}
-                  required
-                  maxLength={2000}
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Tell Us About Your Community *</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder="Describe your community, your mission, and how you plan to share deals with your audience..."
+                    rows={4}
+                    required
+                    maxLength={2000}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="website">Website/Social Media (Optional)</Label>
-                <Input
-                  id="website"
-                  name="website"
-                  value={formData.website}
-                  onChange={handleInputChange}
-                  placeholder="https://..."
-                  maxLength={500}
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website/Social Media (Optional)</Label>
+                  <Input
+                    id="website"
+                    name="website"
+                    value={formData.website}
+                    onChange={handleInputChange}
+                    placeholder="https://..."
+                    maxLength={500}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="whatsappNumber">WhatsApp Number *</Label>
-                <Input
-                  id="whatsappNumber"
-                  name="whatsappNumber"
-                  value={formData.whatsappNumber}
-                  onChange={handleInputChange}
-                  placeholder="+1234567890"
-                  required
-                  maxLength={20}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Include country code (e.g., +1 for US)
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappNumber">WhatsApp Number *</Label>
+                  <Input
+                    id="whatsappNumber"
+                    name="whatsappNumber"
+                    value={formData.whatsappNumber}
+                    onChange={handleInputChange}
+                    placeholder="+1234567890"
+                    required
+                    maxLength={20}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Include country code (e.g., +1 for US). We'll use this to contact you and set up your groups.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Logo/Brand Image (Optional)</Label>
+                  <FileUpload
+                    label="Upload Logo"
+                    onFileSelect={setLogoFile}
+                    onFileRemove={() => setLogoFile(null)}
+                    currentFile={logoFile}
+                    accept="image/*"
+                    validationOptions={{ maxSizeInMB: 5 }}
+                    validateImage={true}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Upload your organization's logo (max 5MB). You can add this later.
+                  </p>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  size="lg"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting Application...
+                    </>
+                  ) : (
+                    "Submit Application"
+                  )}
+                </Button>
+
+                <p className="text-sm text-center text-muted-foreground">
+                  After submission, our team will review your application and contact you within 1-2 business days.
                 </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Logo/Brand Image *</Label>
-                <FileUpload
-                  label="Upload Logo"
-                  onFileSelect={setLogoFile}
-                  onFileRemove={() => setLogoFile(null)}
-                  currentFile={logoFile}
-                  accept="image/*"
-                  validationOptions={{ maxSizeInMB: 5 }}
-                  validateImage={true}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Upload your organization's logo (max 5MB)
-                </p>
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full" 
-                size="lg"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting Application...
-                  </>
-                ) : (
-                  "Submit Application"
-                )}
-              </Button>
-
-              <p className="text-sm text-center text-muted-foreground">
-                After submission, our team will review your application and contact you within 1-2 business days
-              </p>
-            </form>
-          </CardContent>
-        </Card>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+      <Footer />
     </div>
   );
 };
