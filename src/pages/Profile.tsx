@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/FileUpload";
+import { Footer } from "@/components/Footer";
 import { Loader2 } from "lucide-react";
 
 interface UserProject {
@@ -157,10 +158,10 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <RoleBasedNavigation />
       
-      <div className="container mx-auto px-4 py-12">
+      <div className="flex-1 container mx-auto px-4 py-12">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
             <CardTitle>Store Profile</CardTitle>
@@ -241,6 +242,7 @@ const Profile = () => {
           </CardContent>
         </Card>
       </div>
+      <Footer />
     </div>
   );
 };
