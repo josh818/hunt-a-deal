@@ -301,6 +301,16 @@ const Auth = () => {
                         </FormItem>
                       )}
                     />
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="px-0 text-sm text-muted-foreground"
+                        onClick={() => navigate("/reset-password")}
+                      >
+                        Forgot password?
+                      </Button>
+                    </div>
                     <Button
                       type="submit"
                       className="w-full"
