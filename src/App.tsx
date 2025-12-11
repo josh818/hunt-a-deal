@@ -24,6 +24,7 @@ import ApplicationPending from "./pages/ApplicationPending";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import AdminApplications from "./pages/AdminApplications";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/deals" element={<Deals />} />
             <Route path="/deal/:id" element={<DealLanding />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/apply" element={<ApplicationForm />} />
             <Route path="/application-pending" element={<ApplicationPending />} />
             <Route path="/dashboard" element={<Dashboard />} />
