@@ -41,6 +41,30 @@ export type Database = {
         }
         Relationships: []
       }
+      category_rules: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_published: boolean
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       click_tracking: {
         Row: {
           clicked_at: string | null

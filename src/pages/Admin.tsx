@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Trash2, Eye, AlertCircle, Copy, CheckCircle, BarChart, RefreshCw, Users, ShoppingBag, Loader2 } from "lucide-react";
+import { CategoryRulesManager } from "@/components/CategoryRulesManager";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -283,6 +284,11 @@ const Admin = () => {
               <p className="text-xs text-muted-foreground">Approved partner projects</p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Category Rules */}
+        <div className="mb-8">
+          <CategoryRulesManager />
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">

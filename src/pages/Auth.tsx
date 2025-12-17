@@ -214,22 +214,22 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <PublicNavigation />
-      <div className="flex-1 flex items-center justify-center p-4">
+      <div className="flex-1 flex items-center justify-center px-4 py-6 sm:p-4">
         <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Welcome to Relay Station</CardTitle>
-            <CardDescription>Sign up to start earning with your community</CardDescription>
+          <CardHeader className="space-y-1 p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl">Welcome to Relay Station</CardTitle>
+            <CardDescription className="text-sm">Sign up to start earning with your community</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             <Tabs defaultValue="signup" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 h-9 sm:h-10">
+                <TabsTrigger value="signup" className="text-sm">Sign Up</TabsTrigger>
+                <TabsTrigger value="signin" className="text-sm">Sign In</TabsTrigger>
               </TabsList>
               
               <TabsContent value="signup">
                 <Form {...signUpForm}>
-                  <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
+                  <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-3 sm:space-y-4">
                     <FormField
                       control={signUpForm.control}
                       name="email"
