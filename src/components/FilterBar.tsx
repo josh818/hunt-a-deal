@@ -62,41 +62,41 @@ export const FilterBar = ({ filters, onFiltersChange, categories, totalResults }
   ].filter(Boolean).length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Search and Sort Row */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search deals..."
             value={filters.search}
             onChange={(e) => updateFilter("search", e.target.value)}
-            className="pl-10"
+            className="pl-10 h-9 sm:h-10 text-sm"
           />
         </div>
 
         <div className="flex gap-2">
           <Select value={filters.sortBy} onValueChange={(value) => updateFilter("sortBy", value)}>
-            <SelectTrigger className="w-[180px]">
-              <SlidersHorizontal className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Sort by" />
+            <SelectTrigger className="flex-1 sm:w-[160px] h-9 sm:h-10 text-sm">
+              <SlidersHorizontal className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent className="bg-popover z-50">
-              <SelectItem value="newest">Newest First</SelectItem>
-              <SelectItem value="price-low">Price: Low to High</SelectItem>
-              <SelectItem value="price-high">Price: High to Low</SelectItem>
-              <SelectItem value="discount">Highest Discount</SelectItem>
-              <SelectItem value="rating">Best Rating</SelectItem>
+              <SelectItem value="newest" className="text-sm">Newest First</SelectItem>
+              <SelectItem value="price-low" className="text-sm">Price: Low to High</SelectItem>
+              <SelectItem value="price-high" className="text-sm">Price: High to Low</SelectItem>
+              <SelectItem value="discount" className="text-sm">Highest Discount</SelectItem>
+              <SelectItem value="rating" className="text-sm">Best Rating</SelectItem>
             </SelectContent>
           </Select>
 
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" className="relative">
-                <Filter className="mr-2 h-4 w-4" />
-                Filters
+              <Button variant="outline" className="relative h-9 sm:h-10 px-3 sm:px-4 text-sm">
+                <Filter className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Filters</span>
                 {activeFilterCount > 0 && (
-                  <Badge className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center">
+                  <Badge className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-xs">
                     {activeFilterCount}
                   </Badge>
                 )}

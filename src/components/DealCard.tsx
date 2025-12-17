@@ -55,7 +55,7 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
   };
 
   return (
-    <Card className="group overflow-hidden transition-all hover:shadow-lg flex flex-col h-full">
+    <Card className="group overflow-hidden transition-all hover:shadow-lg flex flex-col h-full text-sm sm:text-base">
       <div className="relative aspect-square overflow-hidden bg-muted">
         {!imageLoaded && !imageError && (
           <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-muted via-muted-foreground/10 to-muted" />
@@ -84,22 +84,23 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
             }}
           />
         )}
-        <div className="absolute right-2 top-2 flex flex-col gap-2">
+        <div className="absolute right-1.5 sm:right-2 top-1.5 sm:top-2 flex flex-col gap-1 sm:gap-2">
           {savingsDisplay && (
-            <Badge className="bg-[hsl(var(--deal-badge))] text-[hsl(var(--deal-badge-foreground))] hover:bg-[hsl(var(--deal-badge))]">
+            <Badge className="bg-[hsl(var(--deal-badge))] text-[hsl(var(--deal-badge-foreground))] hover:bg-[hsl(var(--deal-badge))] text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1">
               {savingsDisplay}% OFF
             </Badge>
           )}
           {isDealExpired && (
-            <Badge variant="destructive" className="flex items-center gap-1">
-              <AlertTriangle className="h-3 w-3" />
-              May Have Expired
+            <Badge variant="destructive" className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1">
+              <AlertTriangle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              <span className="hidden sm:inline">May Have Expired</span>
+              <span className="sm:hidden">Expired?</span>
             </Badge>
           )}
         </div>
         {deal.category && deal.category !== "Amazon" && (
-          <div className="absolute left-2 top-2">
-            <Badge variant="secondary" className="text-xs">
+          <div className="absolute left-1.5 sm:left-2 top-1.5 sm:top-2">
+            <Badge variant="secondary" className="text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2 sm:py-1">
               {deal.category}
             </Badge>
           </div>
@@ -111,88 +112,88 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
         )}
       </div>
       
-      <div className="p-4 space-y-3 flex-1 flex flex-col">
+      <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 flex-1 flex flex-col">
         {deal.brand && (
-          <p className="text-sm font-medium text-muted-foreground">{deal.brand}</p>
+          <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{deal.brand}</p>
         )}
         
         {deal.postedAt && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>Posted {formatDistanceToNow(new Date(deal.postedAt), { addSuffix: true })}</span>
+          <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+            <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
+            <span className="truncate">Posted {formatDistanceToNow(new Date(deal.postedAt), { addSuffix: true })}</span>
           </div>
         )}
         
-        <h3 className="line-clamp-2 font-semibold leading-tight">{deal.title}</h3>
+        <h3 className="line-clamp-2 text-sm sm:text-base font-semibold leading-tight">{deal.title}</h3>
         
         {deal.rating && (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 fill-accent text-accent" />
-              <span className="text-sm font-medium">{deal.rating}</span>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-0.5 sm:gap-1">
+              <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-accent text-accent" />
+              <span className="text-xs sm:text-sm font-medium">{deal.rating}</span>
             </div>
             {deal.reviewCount && (
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 ({deal.reviewCount.toLocaleString()})
               </span>
             )}
           </div>
         )}
 
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-[hsl(var(--price-highlight))]">
+        <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+          <span className="text-lg sm:text-2xl font-bold text-[hsl(var(--price-highlight))]">
             ${deal.price.toFixed(2)}
           </span>
           {deal.originalPrice && (
-            <span className="text-sm text-muted-foreground line-through">
+            <span className="text-xs sm:text-sm text-muted-foreground line-through">
               ${deal.originalPrice.toFixed(2)}
             </span>
           )}
         </div>
 
         {deal.fetchedAt && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+          <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground mt-1">
             <Clock className="h-3 w-3" />
             <span>Price as of {formatDistanceToNow(new Date(deal.fetchedAt), { addSuffix: true })}</span>
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground italic">
-          *Prices may change at any time. Check current price on retailer's website.
+        <p className="text-[10px] sm:text-xs text-muted-foreground italic hidden sm:block">
+          *Prices may change. Check retailer's website.
         </p>
 
         {savings && savings > 0 && deal.originalPrice && (
-          <div className="rounded-lg bg-[hsl(var(--savings-bg))] px-3 py-2">
-            <p className="text-sm font-semibold text-[hsl(var(--savings-text))]">
+          <div className="rounded-md sm:rounded-lg bg-[hsl(var(--savings-bg))] px-2 py-1.5 sm:px-3 sm:py-2">
+            <p className="text-xs sm:text-sm font-semibold text-[hsl(var(--savings-text))]">
               Save ${(deal.originalPrice - deal.price).toFixed(2)}
             </p>
           </div>
         )}
 
         {deal.couponCode && (
-          <div className="rounded-lg border border-dashed border-primary/50 bg-primary/5 px-3 py-2">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Coupon Code</p>
-                <code className="text-sm font-mono font-bold text-primary">{deal.couponCode}</code>
+          <div className="rounded-md sm:rounded-lg border border-dashed border-primary/50 bg-primary/5 px-2 py-1.5 sm:px-3 sm:py-2">
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Coupon</p>
+                <code className="text-xs sm:text-sm font-mono font-bold text-primary truncate block">{deal.couponCode}</code>
               </div>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={handleCopyCoupon}
-                className="shrink-0"
+                className="shrink-0 h-7 w-7 sm:h-8 sm:w-8 p-0"
               >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {copied ? <Check className="h-3 w-3 sm:h-4 sm:w-4" /> : <Copy className="h-3 w-3 sm:h-4 sm:w-4" />}
               </Button>
             </div>
           </div>
         )}
 
         {/* Spacer to push button to bottom */}
-        <div className="flex-1" />
+        <div className="flex-1 min-h-1" />
 
         <Button 
-          className="w-full mt-auto" 
+          className="w-full mt-auto h-8 sm:h-10 text-xs sm:text-sm" 
           asChild
         >
           <a
@@ -201,8 +202,9 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
             rel="noopener noreferrer nofollow"
             onClick={handleDealClick}
           >
-            View Deal on Amazon
-            <ExternalLink className="ml-2 h-4 w-4" />
+            <span className="sm:hidden">View Deal</span>
+            <span className="hidden sm:inline">View Deal on Amazon</span>
+            <ExternalLink className="ml-1.5 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
           </a>
         </Button>
       </div>

@@ -319,18 +319,18 @@ const ApplicationForm = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <PublicNavigation />
-      <div className="flex-1 container mx-auto px-4 py-8 sm:py-12">
+      <div className="flex-1 container mx-auto px-4 py-6 sm:py-8 md:py-12">
         <div className="max-w-2xl mx-auto">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl sm:text-3xl">Join Relay Station</CardTitle>
-              <CardDescription className="text-base">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-xl sm:text-2xl md:text-3xl">Join Relay Station</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
                 Tell us about your community and start earning from deals shared with your audience.
                 We'll post curated deals to your WhatsApp groups and you earn commissions on every purchase.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Organization/Community Name *</Label>
                   <Input

@@ -65,8 +65,32 @@ const Deals = () => {
   const { data: deals, isLoading, error } = useQuery({
     queryKey: ["deals"],
     queryFn: fetchDeals,
-    refetchInterval: 60000, // Refetch every minute to check for new cached data
+    refetchInterval: 60000,
   });
+
+  // Fetch category rules to filter unpublished categories
+  const { data: categoryRules } = useQuery({
+    queryKey: ["category-rules"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("category_rules")
+        .select("category, is_published");
+      if (error) return [];
+      return data;
+    },
+  });
+
+  // Filter deals by published categories
+  const publishedDeals = useMemo(() => {
+    if (!deals) return [];
+    if (!categoryRules || categoryRules.length === 0) return deals;
+    
+    const unpublishedCategories = new Set(
+      categoryRules.filter(r => !r.is_published).map(r => r.category)
+    );
+    
+    return deals.filter(deal => !unpublishedCategories.has(deal.category || ""));
+  }, [deals, categoryRules]);
 
   useEffect(() => {
     localStorage.setItem("affiliateTrackingCode", trackingCode);
@@ -76,18 +100,18 @@ const Deals = () => {
     localStorage.setItem("dealFilters", JSON.stringify(filters));
   }, [filters]);
 
-  // Extract unique categories
+  // Extract unique categories from published deals only
   const categories = useMemo(() => {
-    if (!deals) return [];
-    const cats = new Set(deals.map(d => d.category).filter(Boolean));
+    if (!publishedDeals) return [];
+    const cats = new Set(publishedDeals.map(d => d.category).filter(Boolean));
     return Array.from(cats).sort();
-  }, [deals]);
+  }, [publishedDeals]);
 
-  // Filter and sort deals
+  // Filter and sort deals (using publishedDeals as base)
   const filteredDeals = useMemo(() => {
-    if (!deals) return [];
+    if (!publishedDeals) return [];
 
-    let filtered = [...deals];
+    let filtered = [...publishedDeals];
 
     // Search filter
     if (filters.search) {
@@ -149,7 +173,7 @@ const Deals = () => {
     }
 
     return filtered;
-  }, [deals, filters]);
+  }, [publishedDeals, filters]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -164,36 +188,36 @@ const Deals = () => {
       <Navigation />
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
         {error && (
-          <Alert variant="destructive" className="mb-6">
+          <Alert variant="destructive" className="mb-4 sm:mb-6">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Unable to load deals. This could be due to a network issue or server maintenance. Please refresh the page or try again in a few minutes.
+            <AlertDescription className="text-sm">
+              Unable to load deals. Please refresh or try again later.
             </AlertDescription>
           </Alert>
         )}
 
         {isLoading ? (
           <>
-            <div className="mb-6 space-y-4">
+            <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
               <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full md:w-[400px]" />
+              <Skeleton className="h-10 w-full sm:w-[300px]" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="space-y-3">
+                <div key={i} className="space-y-2 sm:space-y-3">
                   <Skeleton className="aspect-square w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-3 sm:h-4 w-3/4" />
+                  <Skeleton className="h-3 sm:h-4 w-1/2" />
+                  <Skeleton className="h-8 sm:h-10 w-full" />
                 </div>
               ))}
             </div>
           </>
         ) : deals && deals.length > 0 ? (
           <>
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <FilterBar
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -201,7 +225,7 @@ const Deals = () => {
                 totalResults={filteredDeals.length}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {filteredDeals.map((deal) => (
                 <DealCard 
                   key={deal.id} 
