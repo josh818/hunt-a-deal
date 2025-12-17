@@ -54,27 +54,29 @@ const ApplicationForm = () => {
     const checkAuth = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (!user) {
           navigate("/auth");
           return;
         }
-        
+
         setUserId(user.id);
-        
+
         // Check if user already has an application
         const { data: existingProjects, error } = await supabase
-          .from('projects')
-          .select('name, is_active')
-          .eq('created_by', user.id)
+          .from("projects")
+          .select("name, is_active")
+          .eq("created_by", user.id)
           .limit(1);
-        
+
         if (error) {
           console.error("Error checking existing projects:", error);
         }
-        
+
         if (existingProjects && existingProjects.length > 0) {
-          setExistingApplication(existingProjects[0]);
+          // Approved -> dashboard; pending -> pending status page
+          navigate(existingProjects[0].is_active ? "/dashboard" : "/application-pending", { replace: true });
+          return;
         }
       } catch (error) {
         console.error("Auth check error:", error);
@@ -83,7 +85,7 @@ const ApplicationForm = () => {
         setCheckingAuth(false);
       }
     };
-    
+
     checkAuth();
   }, [navigate]);
 
