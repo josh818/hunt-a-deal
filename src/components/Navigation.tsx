@@ -3,7 +3,7 @@ import { Home, Tag, Share2, Sparkles, Folder, Settings, Clock, BarChart3, Shield
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -26,44 +26,37 @@ const checkIsAdmin = async () => {
 export const Navigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  
+
   const { data: isAdmin } = useQuery({
-    queryKey: ['isAdmin'],
+    queryKey: ["isAdmin"],
     queryFn: checkIsAdmin,
   });
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     toast.success("Signed out successfully");
-    navigate('/auth');
+    navigate("/auth");
   };
 
   const syncDeals = async () => {
     if (isSyncing) return;
-    
+
     setIsSyncing(true);
     try {
       toast.loading("Refreshing deals from source...", { id: "sync-deals" });
-      
-      // Get the current session to pass the auth token
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const { data, error } = await supabase.functions.invoke('sync-deals', {
-        headers: session ? {
-          'Authorization': `Bearer ${session.access_token}`
-        } : undefined
-      });
-      
+
+      // The backend automatically receives the user's auth context; don't override headers.
+      const { error } = await supabase.functions.invoke("sync-deals");
       if (error) throw error;
-      
+
       toast.success("Deals refreshed successfully!", { id: "sync-deals" });
-      // Invalidate query cache instead of hard reload
-      window.location.reload();
-    } catch (error) {
-      console.error('Error syncing deals:', error);
-      toast.error("Failed to refresh deals. Please try again.", { id: "sync-deals" });
+      await queryClient.invalidateQueries({ queryKey: ["deals"] });
+    } catch (error: any) {
+      console.error("Error syncing deals:", error);
+      toast.error(error?.message || "Failed to refresh deals. Please try again.", { id: "sync-deals" });
     } finally {
       setIsSyncing(false);
     }

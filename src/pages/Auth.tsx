@@ -80,31 +80,33 @@ const Auth = () => {
     const checkAuthAndRedirect = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          // Check if user has a project
-          const { data: projects } = await supabase
-            .from('projects')
-            .select('id, is_active')
-            .eq('created_by', user.id)
-            .limit(1);
 
+        if (user) {
           // Check if user is admin
           const { data: roles } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .eq('role', 'admin')
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id)
+            .eq("role", "admin")
             .single();
 
           if (roles) {
-            // Admin goes to admin dashboard
             navigate("/admin");
-          } else if (projects && projects.length > 0) {
-            // User has a project - go to dashboard
-            navigate("/dashboard");
+            return;
+          }
+
+          // Check if user has a project/application
+          const { data: projects } = await supabase
+            .from("projects")
+            .select("id, is_active")
+            .eq("created_by", user.id)
+            .limit(1);
+
+          if (projects && projects.length > 0) {
+            // If approved -> dashboard; if pending -> pending status page
+            navigate(projects[0].is_active ? "/dashboard" : "/application-pending");
           } else {
-            // New user - go to application form
+            // New user - start application
             navigate("/apply");
           }
         }
@@ -164,33 +166,37 @@ const Auth = () => {
         description: message,
         variant: "destructive",
       });
-    } else if (data.user) {
-      // Check where to redirect
-      const { data: projects } = await supabase
-        .from('projects')
-        .select('id, is_active')
-        .eq('created_by', data.user.id)
-        .limit(1);
+      return;
+    }
 
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', data.user.id)
-        .eq('role', 'admin')
-        .single();
+    if (!data.user) return;
 
-      toast({
-        title: "Welcome back!",
-        description: "Signed in successfully.",
-      });
+    // Admin?
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .eq("role", "admin")
+      .single();
 
-      if (roles) {
-        navigate("/admin");
-      } else if (projects && projects.length > 0) {
-        navigate("/dashboard");
-      } else {
-        navigate("/apply");
-      }
+    // Project/application?
+    const { data: projects } = await supabase
+      .from("projects")
+      .select("id, is_active")
+      .eq("created_by", data.user.id)
+      .limit(1);
+
+    toast({
+      title: "Welcome back!",
+      description: "Signed in successfully.",
+    });
+
+    if (roles) {
+      navigate("/admin");
+    } else if (projects && projects.length > 0) {
+      navigate(projects[0].is_active ? "/dashboard" : "/application-pending");
+    } else {
+      navigate("/apply");
     }
   };
 
