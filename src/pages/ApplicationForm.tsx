@@ -156,16 +156,18 @@ const ApplicationForm = () => {
       // Double-check no existing application (race condition prevention)
       const { data: existingCheck } = await supabase
         .from('projects')
-        .select('id')
+        .select('id, is_active')
         .eq('created_by', userId)
+        .order('created_at', { ascending: false })
         .limit(1);
 
       if (existingCheck && existingCheck.length > 0) {
+        const isActive = !!existingCheck[0].is_active;
         toast({
           title: "Application Exists",
-          description: "You already have an application. Redirecting to your dashboard.",
+          description: "You already have an application. Redirecting you now.",
         });
-        navigate("/dashboard");
+        navigate(isActive ? "/dashboard" : "/application-pending", { replace: true });
         return;
       }
 
