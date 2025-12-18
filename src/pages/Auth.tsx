@@ -75,54 +75,68 @@ const Auth = () => {
     },
   });
 
-  // Check for existing user and redirect appropriately
+  const getPostAuthRedirect = async (userId: string) => {
+    // Admin?
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (roles) return "/admin";
+
+    // Existing application / project?
+    const { data: projects } = await supabase
+      .from("projects")
+      .select("id, is_active")
+      .eq("created_by", userId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (projects && projects.length > 0) {
+      return projects[0].is_active ? "/dashboard" : "/application-pending";
+    }
+
+    return "/apply";
+  };
+
+  // Keep auth state in sync and redirect reliably (prevents redirect loops)
   useEffect(() => {
-    const checkAuthAndRedirect = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (user) {
-          // Check if user is admin
-          const { data: roles } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id)
-            .eq("role", "admin")
-            .single();
-
-          if (roles) {
-            navigate("/admin");
-            return;
-          }
-
-          // Check if user has a project/application
-          const { data: projects } = await supabase
-            .from("projects")
-            .select("id, is_active")
-            .eq("created_by", user.id)
-            .limit(1);
-
-          if (projects && projects.length > 0) {
-            // If approved -> dashboard; if pending -> pending status page
-            navigate(projects[0].is_active ? "/dashboard" : "/application-pending");
-          } else {
-            // New user - start application
-            navigate("/apply");
-          }
-        }
-      } catch (error) {
-        console.error("Auth check error:", error);
-      } finally {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const userId = session?.user?.id;
+      if (!userId) {
         setCheckingAuth(false);
+        return;
       }
-    };
 
-    checkAuthAndRedirect();
+      // Defer DB calls to avoid auth callback deadlocks
+      setTimeout(() => {
+        getPostAuthRedirect(userId)
+          .then((path) => navigate(path, { replace: true }))
+          .finally(() => setCheckingAuth(false));
+      }, 0);
+    });
+
+    // Initial check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const userId = session?.user?.id;
+      if (!userId) {
+        setCheckingAuth(false);
+        return;
+      }
+
+      getPostAuthRedirect(userId)
+        .then((path) => navigate(path, { replace: true }))
+        .finally(() => setCheckingAuth(false));
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleSignUp = async (values: SignUpFormValues) => {
     const redirectUrl = `${window.location.origin}/apply`;
-    
+
     const { data, error } = await supabase.auth.signUp({
       email: values.email.trim(),
       password: values.password,
@@ -133,7 +147,7 @@ const Auth = () => {
 
     if (error) {
       let message = error.message;
-      if (error.message.includes("already registered")) {
+      if (error.message.toLowerCase().includes("already") && error.message.toLowerCase().includes("registered")) {
         message = "This email is already registered. Please sign in instead.";
       }
       toast({
@@ -141,13 +155,23 @@ const Auth = () => {
         description: message,
         variant: "destructive",
       });
-    } else if (data.user) {
-      toast({
-        title: "Account Created!",
-        description: "Welcome to Relay Station! Let's set up your store.",
-      });
-      navigate("/apply");
+      return;
     }
+
+    // If email confirmation is ever enabled, session can be null here.
+    if (!data.session) {
+      toast({
+        title: "Check your email",
+        description: "Please confirm your email address to finish creating your account.",
+      });
+      return;
+    }
+
+    toast({
+      title: "Account Created!",
+      description: "Welcome to Relay Station! Let's set up your store.",
+    });
+    navigate("/apply", { replace: true });
   };
 
   const handleSignIn = async (values: SignInFormValues) => {
@@ -169,35 +193,17 @@ const Auth = () => {
       return;
     }
 
-    if (!data.user) return;
+    const userId = data.user?.id;
+    if (!userId) return;
 
-    // Admin?
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", data.user.id)
-      .eq("role", "admin")
-      .single();
-
-    // Project/application?
-    const { data: projects } = await supabase
-      .from("projects")
-      .select("id, is_active")
-      .eq("created_by", data.user.id)
-      .limit(1);
+    const path = await getPostAuthRedirect(userId);
 
     toast({
       title: "Welcome back!",
       description: "Signed in successfully.",
     });
 
-    if (roles) {
-      navigate("/admin");
-    } else if (projects && projects.length > 0) {
-      navigate(projects[0].is_active ? "/dashboard" : "/application-pending");
-    } else {
-      navigate("/apply");
-    }
+    navigate(path, { replace: true });
   };
 
   if (checkingAuth) {
