@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import { AuthCallbackHandler } from "@/components/AuthCallbackHandler";
 import Index from "./pages/Index";
 import Deals from "./pages/Deals";
 import DealLanding from "./pages/DealLanding";
@@ -33,6 +34,7 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
         <BrowserRouter>
+          <AuthCallbackHandler />
           <Toaster />
           <Sonner />
           <Routes>
