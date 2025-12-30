@@ -44,11 +44,7 @@ const signUpSchema = z.object({
     .string()
     .min(1, "Password is required")
     .min(6, "Password must be at least 6 characters")
-    .max(72, "Password must be less than 72 characters")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
-    ),
+    .max(72, "Password must be less than 72 characters"),
 });
 
 type SignInFormValues = z.infer<typeof signInSchema>;
@@ -110,6 +106,13 @@ const Auth = () => {
         return;
       }
 
+      if (event === "SIGNED_IN") {
+        toast({
+          title: "Signed in",
+          description: "Finishing setup…",
+        });
+      }
+
       // Defer DB calls to avoid auth callback deadlocks
       setTimeout(() => {
         getPostAuthRedirect(userId)
@@ -132,10 +135,11 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleSignUp = async (values: SignUpFormValues) => {
-    const redirectUrl = `${window.location.origin}/apply`;
+    // Always redirect back into the app after email-link confirmation.
+    const redirectUrl = `${window.location.origin}/auth`;
 
     const { data, error } = await supabase.auth.signUp({
       email: values.email.trim(),
@@ -158,20 +162,20 @@ const Auth = () => {
       return;
     }
 
-    // If email confirmation is ever enabled, session can be null here.
+    // If email confirmation is enabled, session can be null here.
     if (!data.session) {
       toast({
         title: "Check your email",
-        description: "Please confirm your email address to finish creating your account.",
+        description: "Click the link we sent to finish creating your account.",
       });
       return;
     }
 
     toast({
-      title: "Account Created!",
-      description: "Welcome to Relay Station! Let's set up your store.",
+      title: "Account created",
+      description: "You're signed in. Redirecting you now…",
     });
-    navigate("/apply", { replace: true });
+    // Do not navigate here; the auth listener will reliably route based on your role/application status.
   };
 
   const handleSignIn = async (values: SignInFormValues) => {
@@ -258,7 +262,7 @@ const Auth = () => {
                           <FormControl>
                             <Input
                               type="password"
-                              placeholder="Min 6 chars with uppercase, lowercase, and number"
+                              placeholder="At least 6 characters"
                               {...field}
                             />
                           </FormControl>
