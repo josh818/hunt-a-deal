@@ -1,14 +1,21 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Star, ImageOff, Copy, Check, Clock, AlertTriangle } from "lucide-react";
+import { ExternalLink, Star, ImageOff, Copy, Check, Clock, AlertTriangle, Share2, Facebook, Twitter, MessageCircle, Link as LinkIcon } from "lucide-react";
 import { Deal } from "@/types/deal";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow, differenceInHours } from "date-fns";
 import { replaceTrackingCode } from "@/utils/trackingCode";
 import { trackClick } from "@/utils/clickTracking";
+import { trackShare } from "@/utils/shareTracking";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface DealCardProps {
   deal: Deal;
@@ -18,6 +25,7 @@ interface DealCardProps {
 
 export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
   const navigate = useNavigate();
+  const { slug } = useParams<{ slug: string }>();
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -25,6 +33,15 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
     ? Math.max(0, ((deal.originalPrice - deal.price) / deal.originalPrice * 100))
     : deal.discount;
   const savingsDisplay = savings && savings > 0 ? savings.toFixed(0) : null;
+  
+  // Generate deal link for sharing
+  const getDealShareUrl = () => {
+    const baseUrl = window.location.origin;
+    if (slug) {
+      return `${baseUrl}/project/${slug}/deal/${deal.id}`;
+    }
+    return `${baseUrl}/deal/${deal.id}`;
+  };
   
   const isDealExpired = deal.postedAt 
     ? differenceInHours(new Date(), new Date(deal.postedAt)) > 25
@@ -39,6 +56,41 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
         description: `Code "${deal.couponCode}" copied to clipboard`,
       });
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleShareDeal = async (platform: 'facebook' | 'twitter' | 'whatsapp' | 'copy') => {
+    const shareUrl = getDealShareUrl();
+    const shareText = `Check out this deal: ${deal.title} - $${deal.price.toFixed(2)}${savingsDisplay ? ` (${savingsDisplay}% OFF)` : ''}`;
+    
+    // Track the share
+    if (projectId) {
+      const platformMap: Record<string, 'facebook' | 'twitter' | 'whatsapp' | 'copy_link'> = {
+        'facebook': 'facebook',
+        'twitter': 'twitter',
+        'whatsapp': 'whatsapp',
+        'copy': 'copy_link'
+      };
+      await trackShare({ projectId, platform: platformMap[platform] || 'copy_link' });
+    }
+    
+    switch (platform) {
+      case 'facebook':
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
+        break;
+      case 'twitter':
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+        break;
+      case 'whatsapp':
+        window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`, '_blank');
+        break;
+      case 'copy':
+        await navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: "Link copied!",
+          description: "Deal link copied to clipboard",
+        });
+        break;
     }
   };
 
@@ -198,19 +250,47 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
         {/* Spacer to push button to bottom */}
         <div className="flex-1 min-h-1" />
 
-        <Button 
-          className="w-full mt-auto h-8 sm:h-10 text-xs sm:text-sm" 
-          asChild
-        >
-          <a
-            href={displayUrl}
-            onClick={handleDealClick}
+        <div className="flex gap-2">
+          <Button 
+            className="flex-1 h-8 sm:h-10 text-xs sm:text-sm" 
+            asChild
           >
-            <span className="sm:hidden">View Deal</span>
-            <span className="hidden sm:inline">View Deal on Amazon</span>
-            <ExternalLink className="ml-1.5 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
-          </a>
-        </Button>
+            <a
+              href={displayUrl}
+              onClick={handleDealClick}
+            >
+              <span className="sm:hidden">View Deal</span>
+              <span className="hidden sm:inline">View Deal</span>
+              <ExternalLink className="ml-1.5 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+            </a>
+          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
+                <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleShareDeal('facebook')}>
+                <Facebook className="mr-2 h-4 w-4" />
+                Facebook
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShareDeal('twitter')}>
+                <Twitter className="mr-2 h-4 w-4" />
+                Twitter
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShareDeal('whatsapp')}>
+                <MessageCircle className="mr-2 h-4 w-4" />
+                WhatsApp
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShareDeal('copy')}>
+                <LinkIcon className="mr-2 h-4 w-4" />
+                Copy Link
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </Card>
   );
