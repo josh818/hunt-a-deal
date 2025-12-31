@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DealCard } from "@/components/DealCard";
@@ -8,17 +8,36 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Clock, Home, MessageCircle, Package, Store } from "lucide-react";
+import { 
+  AlertCircle, 
+  Clock, 
+  Facebook, 
+  Home, 
+  Link2, 
+  MessageCircle, 
+  Package, 
+  RefreshCw, 
+  Share2, 
+  Store, 
+  Twitter 
+} from "lucide-react";
 import { replaceTrackingCode } from "@/utils/trackingCode";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const ProjectDeals = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // First, check if project exists at all (including inactive)
-  const { data: projectCheck, isLoading: checkLoading, error: checkError } = useQuery({
+  const { data: projectCheck, isLoading: checkLoading, error: checkError, refetch: refetchCheck } = useQuery({
     queryKey: ['project-check', slug],
     queryFn: async () => {
       try {
@@ -48,7 +67,7 @@ const ProjectDeals = () => {
   });
 
   // Fetch full project details only if it exists and is active
-  const { data: project, isLoading: projectLoading, error: projectError } = useQuery({
+  const { data: project, isLoading: projectLoading, error: projectError, refetch: refetchProject } = useQuery({
     queryKey: ['project', slug],
     queryFn: async () => {
       try {
@@ -78,7 +97,7 @@ const ProjectDeals = () => {
     retry: 1,
   });
 
-  const { data: deals, isLoading: dealsLoading, error: dealsError } = useQuery({
+  const { data: deals, isLoading: dealsLoading, error: dealsError, refetch: refetchDeals } = useQuery({
     queryKey: ['project-deals', project?.id],
     queryFn: async () => {
       try {
@@ -133,6 +152,54 @@ const ProjectDeals = () => {
     return `https://wa.me/${cleaned}`;
   };
 
+  // Retry all queries
+  const handleRetry = () => {
+    refetchCheck();
+    if (projectCheck?.is_active) {
+      refetchProject();
+    }
+    if (project) {
+      refetchDeals();
+    }
+  };
+
+  // Share functionality
+  const getShareUrl = () => {
+    return `https://hunt-a-deal.lovable.app/project/${slug}/deals`;
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+      toast({
+        title: "Link Copied!",
+        description: "Store link copied to clipboard",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the URL manually",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleShareTwitter = () => {
+    const text = encodeURIComponent(`Check out amazing deals from ${project?.name}!`);
+    const url = encodeURIComponent(getShareUrl());
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
+  };
+
+  const handleShareFacebook = () => {
+    const url = encodeURIComponent(getShareUrl());
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = encodeURIComponent(`Check out amazing deals from ${project?.name}! ${getShareUrl()}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
   // Loading state
   if (checkLoading || projectLoading || (project && dealsLoading)) {
     return (
@@ -185,10 +252,16 @@ const ProjectDeals = () => {
                 This store is pending approval and will be available soon. 
                 Please check back later or contact the store owner for updates.
               </p>
-              <Button onClick={() => navigate("/")} className="gap-2">
-                <Home className="h-4 w-4" />
-                Back to Home
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={handleRetry} variant="outline" className="gap-2 flex-1">
+                  <RefreshCw className="h-4 w-4" />
+                  Retry
+                </Button>
+                <Button onClick={() => navigate("/")} className="gap-2 flex-1">
+                  <Home className="h-4 w-4" />
+                  Back to Home
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </main>
@@ -214,10 +287,16 @@ const ProjectDeals = () => {
                 This store doesn't exist or hasn't been approved yet. 
                 Please check the URL or contact the store owner.
               </p>
-              <Button onClick={() => navigate("/")} className="gap-2">
-                <Home className="h-4 w-4" />
-                Back to Home
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={() => refetchCheck()} variant="outline" className="gap-2 flex-1">
+                  <RefreshCw className="h-4 w-4" />
+                  Retry
+                </Button>
+                <Button onClick={() => navigate("/")} className="gap-2 flex-1">
+                  <Home className="h-4 w-4" />
+                  Back to Home
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </main>
@@ -243,10 +322,16 @@ const ProjectDeals = () => {
                 Something went wrong while loading this store. 
                 Please try again or contact support.
               </p>
-              <Button onClick={() => navigate("/")} className="gap-2">
-                <Home className="h-4 w-4" />
-                Back to Home
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={handleRetry} variant="outline" className="gap-2 flex-1">
+                  <RefreshCw className="h-4 w-4" />
+                  Retry
+                </Button>
+                <Button onClick={() => navigate("/")} className="gap-2 flex-1">
+                  <Home className="h-4 w-4" />
+                  Back to Home
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </main>
@@ -314,6 +399,34 @@ const ProjectDeals = () => {
                     </a>
                   </Button>
                 )}
+
+                {/* Share Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="gap-2">
+                      <Share2 className="h-4 w-4" />
+                      <span className="hidden sm:inline">Share</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={handleCopyLink} className="gap-2 cursor-pointer">
+                      <Link2 className="h-4 w-4" />
+                      Copy Link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleShareTwitter} className="gap-2 cursor-pointer">
+                      <Twitter className="h-4 w-4" />
+                      Share on Twitter
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleShareFacebook} className="gap-2 cursor-pointer">
+                      <Facebook className="h-4 w-4" />
+                      Share on Facebook
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleShareWhatsApp} className="gap-2 cursor-pointer">
+                      <MessageCircle className="h-4 w-4" />
+                      Share on WhatsApp
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
@@ -331,11 +444,12 @@ const ProjectDeals = () => {
               <div>
                 <h3 className="font-semibold text-lg">Failed to Load Deals</h3>
                 <p className="text-muted-foreground text-sm mt-1">
-                  Something went wrong. Please refresh the page to try again.
+                  Something went wrong. Please try again.
                 </p>
               </div>
-              <Button onClick={() => window.location.reload()} variant="outline">
-                Refresh Page
+              <Button onClick={() => refetchDeals()} variant="outline" className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Retry
               </Button>
             </CardContent>
           </Card>
@@ -362,10 +476,16 @@ const ProjectDeals = () => {
                   No deals available right now. Check back soon!
                 </p>
               </div>
-              <Button onClick={() => navigate("/")} variant="outline" className="gap-2">
-                <Home className="h-4 w-4" />
-                Back to Home
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Button onClick={() => refetchDeals()} variant="outline" className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </Button>
+                <Button onClick={() => navigate("/")} variant="outline" className="gap-2">
+                  <Home className="h-4 w-4" />
+                  Back to Home
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
