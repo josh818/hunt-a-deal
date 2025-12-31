@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   AlertCircle, 
+  ArrowLeft,
   Clock, 
   Facebook, 
   Home, 
@@ -20,7 +21,8 @@ import {
   RefreshCw, 
   Share2, 
   Store, 
-  Twitter 
+  Twitter,
+  User
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { replaceTrackingCode } from "@/utils/trackingCode";
@@ -38,6 +40,32 @@ const ProjectDeals = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isOwner, setIsOwner] = useState(false);
+
+  // Check if current user owns this project
+  useEffect(() => {
+    const checkOwnership = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setIsOwner(false);
+        return;
+      }
+      
+      // Check if this user owns a project with this slug
+      const { data } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('created_by', user.id)
+        .eq('slug', slug)
+        .maybeSingle();
+      
+      setIsOwner(!!data);
+    };
+    
+    if (slug) {
+      checkOwnership();
+    }
+  }, [slug]);
 
   // First, check if project exists at all (including inactive) using secure RPC function
   const { data: projectCheck, isLoading: checkLoading, error: checkError, refetch: refetchCheck } = useQuery({
@@ -426,13 +454,26 @@ const ProjectDeals = () => {
                 {project.name}
               </h1>
               
-              {project.description && (
+              {project.description && !project.description.includes('Community Type:') && (
                 <p className="text-muted-foreground text-sm sm:text-base max-w-2xl line-clamp-2">
-                  {project.description}
+                  {project.description.split('\n\n')[0]}
                 </p>
               )}
               
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                {isOwner && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Back to Dashboard</span>
+                    <span className="sm:hidden">Dashboard</span>
+                  </Button>
+                )}
+                
                 <Badge variant="secondary" className="gap-1.5">
                   <Package className="h-3.5 w-3.5" />
                   {dealCount} {dealCount === 1 ? 'Deal' : 'Deals'} Available
