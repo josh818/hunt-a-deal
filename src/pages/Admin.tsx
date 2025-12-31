@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Navigation } from "@/components/Navigation";
+import { AdminNavigation } from "@/components/AdminNavigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -252,7 +252,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
+      <AdminNavigation />
       
       <main className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
