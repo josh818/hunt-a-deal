@@ -131,15 +131,48 @@ const AdminApplications = () => {
       return;
     }
 
+    // Validate Amazon tracking code ends with -20
+    if (!amazonCode.trim().endsWith("-20")) {
+      toast({
+        title: "Invalid Tracking Code",
+        description: "Amazon tracking codes should end with -20 (e.g., 'yourcode-20')",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      // Generate slug from name
-      const slug = selectedApp.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      // Generate base slug from name
+      let baseSlug = selectedApp.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
+        .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+
+      // Check if slug exists and make unique if needed
+      let slug = baseSlug;
+      let slugCounter = 1;
+      
+      while (true) {
+        const { data: existingProject } = await supabase
+          .from("projects")
+          .select("id")
+          .eq("slug", slug)
+          .neq("id", selectedApp.id)
+          .maybeSingle();
+
+        if (!existingProject) {
+          break; // Slug is unique
+        }
+
+        slugCounter++;
+        slug = `${baseSlug}-${slugCounter}`;
+      }
       
       // Update project with Amazon code, slug, and activate it
       const { error } = await supabase
         .from("projects")
         .update({ 
-          tracking_code: amazonCode,
+          tracking_code: amazonCode.trim(),
           slug: slug,
           is_active: true 
         })
@@ -152,7 +185,8 @@ const AdminApplications = () => {
 
       toast({
         title: "Success",
-        description: `Project activated! Site available at: /project/${slug}/deals`,
+        description: `Project activated! Site URL: /project/${slug}/deals`,
+        duration: 10000,
       });
 
       setIsCodeDialogOpen(false);
