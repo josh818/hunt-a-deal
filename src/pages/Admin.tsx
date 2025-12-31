@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Trash2, Eye, AlertCircle, Copy, CheckCircle, BarChart, RefreshCw, Users, ShoppingBag, Loader2 } from "lucide-react";
 import { CategoryRulesManager } from "@/components/CategoryRulesManager";
 import { ShareAnalytics } from "@/components/ShareAnalytics";
+import { ClickAnalytics } from "@/components/ClickAnalytics";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -295,6 +296,11 @@ const Admin = () => {
         {/* Share Analytics */}
         <div className="mb-8">
           <ShareAnalytics showAllProjects />
+        </div>
+
+        {/* Click Analytics */}
+        <div className="mb-8">
+          <ClickAnalytics showAllProjects />
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
