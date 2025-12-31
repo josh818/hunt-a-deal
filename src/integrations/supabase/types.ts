@@ -324,6 +324,41 @@ export type Database = {
         }
         Relationships: []
       }
+      share_tracking: {
+        Row: {
+          id: string
+          platform: string
+          project_id: string | null
+          referer: string | null
+          shared_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          id?: string
+          platform: string
+          project_id?: string | null
+          referer?: string | null
+          shared_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          id?: string
+          platform?: string
+          project_id?: string | null
+          referer?: string | null
+          shared_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_tracking_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
