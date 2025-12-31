@@ -14,6 +14,7 @@ import {
   Facebook, 
   Home, 
   Link2, 
+  Mail, 
   MessageCircle, 
   Package, 
   RefreshCw, 
@@ -21,6 +22,7 @@ import {
   Store, 
   Twitter 
 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { replaceTrackingCode } from "@/utils/trackingCode";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -152,6 +154,13 @@ const ProjectDeals = () => {
     return `https://wa.me/${cleaned}`;
   };
 
+  // Check if native sharing is available
+  const [canNativeShare, setCanNativeShare] = useState(false);
+  
+  useEffect(() => {
+    setCanNativeShare(typeof navigator !== 'undefined' && !!navigator.share);
+  }, []);
+
   // Retry all queries
   const handleRetry = () => {
     refetchCheck();
@@ -166,6 +175,26 @@ const ProjectDeals = () => {
   // Share functionality
   const getShareUrl = () => {
     return `https://hunt-a-deal.lovable.app/project/${slug}/deals`;
+  };
+
+  const getShareText = () => {
+    return `Check out amazing deals from ${project?.name}!`;
+  };
+
+  // Native Web Share API
+  const handleNativeShare = async () => {
+    try {
+      await navigator.share({
+        title: `${project?.name} - Deals`,
+        text: getShareText(),
+        url: getShareUrl(),
+      });
+    } catch (err) {
+      // User cancelled or share failed - fall back silently
+      if ((err as Error).name !== 'AbortError') {
+        console.error("Native share failed:", err);
+      }
+    }
   };
 
   const handleCopyLink = async () => {
@@ -185,7 +214,7 @@ const ProjectDeals = () => {
   };
 
   const handleShareTwitter = () => {
-    const text = encodeURIComponent(`Check out amazing deals from ${project?.name}!`);
+    const text = encodeURIComponent(getShareText());
     const url = encodeURIComponent(getShareUrl());
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
   };
@@ -196,8 +225,14 @@ const ProjectDeals = () => {
   };
 
   const handleShareWhatsApp = () => {
-    const text = encodeURIComponent(`Check out amazing deals from ${project?.name}! ${getShareUrl()}`);
+    const text = encodeURIComponent(`${getShareText()} ${getShareUrl()}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
+  const handleShareEmail = () => {
+    const subject = encodeURIComponent(`Check out ${project?.name} - Amazing Deals!`);
+    const body = encodeURIComponent(`${getShareText()}\n\n${getShareUrl()}`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
   // Loading state
@@ -400,33 +435,49 @@ const ProjectDeals = () => {
                   </Button>
                 )}
 
-                {/* Share Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" className="gap-2">
-                      <Share2 className="h-4 w-4" />
-                      <span className="hidden sm:inline">Share</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={handleCopyLink} className="gap-2 cursor-pointer">
-                      <Link2 className="h-4 w-4" />
-                      Copy Link
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareTwitter} className="gap-2 cursor-pointer">
-                      <Twitter className="h-4 w-4" />
-                      Share on Twitter
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareFacebook} className="gap-2 cursor-pointer">
-                      <Facebook className="h-4 w-4" />
-                      Share on Facebook
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareWhatsApp} className="gap-2 cursor-pointer">
-                      <MessageCircle className="h-4 w-4" />
-                      Share on WhatsApp
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Share Button - Native on mobile, dropdown on desktop */}
+                {canNativeShare ? (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="gap-2"
+                    onClick={handleNativeShare}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    <span className="hidden sm:inline">Share</span>
+                  </Button>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline" className="gap-2">
+                        <Share2 className="h-4 w-4" />
+                        <span className="hidden sm:inline">Share</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={handleCopyLink} className="gap-2 cursor-pointer">
+                        <Link2 className="h-4 w-4" />
+                        Copy Link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareEmail} className="gap-2 cursor-pointer">
+                        <Mail className="h-4 w-4" />
+                        Share via Email
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareTwitter} className="gap-2 cursor-pointer">
+                        <Twitter className="h-4 w-4" />
+                        Share on Twitter
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareFacebook} className="gap-2 cursor-pointer">
+                        <Facebook className="h-4 w-4" />
+                        Share on Facebook
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareWhatsApp} className="gap-2 cursor-pointer">
+                        <MessageCircle className="h-4 w-4" />
+                        Share on WhatsApp
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           </div>
