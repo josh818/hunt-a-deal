@@ -70,28 +70,19 @@ export type Database = {
           clicked_at: string | null
           deal_id: string
           id: string
-          ip_address: string | null
           project_id: string | null
-          referer: string | null
-          user_agent: string | null
         }
         Insert: {
           clicked_at?: string | null
           deal_id: string
           id?: string
-          ip_address?: string | null
           project_id?: string | null
-          referer?: string | null
-          user_agent?: string | null
         }
         Update: {
           clicked_at?: string | null
           deal_id?: string
           id?: string
-          ip_address?: string | null
           project_id?: string | null
-          referer?: string | null
-          user_agent?: string | null
         }
         Relationships: [
           {
@@ -329,25 +320,19 @@ export type Database = {
           id: string
           platform: string
           project_id: string | null
-          referer: string | null
           shared_at: string
-          user_agent: string | null
         }
         Insert: {
           id?: string
           platform: string
           project_id?: string | null
-          referer?: string | null
           shared_at?: string
-          user_agent?: string | null
         }
         Update: {
           id?: string
           platform?: string
           project_id?: string | null
-          referer?: string | null
           shared_at?: string
-          user_agent?: string | null
         }
         Relationships: [
           {
