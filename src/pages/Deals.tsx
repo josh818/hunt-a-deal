@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { Navigation } from "@/components/Navigation";
@@ -13,7 +13,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { getDefaultTrackingCode } from "@/utils/trackingCode";
 import { formatDistanceToNow } from "date-fns";
-
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 const fetchDeals = async (): Promise<Deal[]> => {
   // Fetch deals from our database cache
   const { data, error } = await supabase
@@ -47,9 +48,12 @@ const fetchDeals = async (): Promise<Deal[]> => {
 };
 
 const Deals = () => {
+  const queryClient = useQueryClient();
   const [trackingCode, setTrackingCode] = useState(() => {
     return localStorage.getItem("affiliateTrackingCode") || getDefaultTrackingCode();
   });
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [session, setSession] = useState<any>(null);
 
   const [filters, setFilters] = useState<Filters>(() => {
     const saved = localStorage.getItem("dealFilters");
@@ -62,6 +66,39 @@ const Deals = () => {
       sortBy: "newest",
     };
   });
+
+  // Check auth state
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const syncDeals = async () => {
+    if (isSyncing) return;
+
+    setIsSyncing(true);
+    try {
+      toast.loading("Refreshing deals from source...", { id: "sync-deals" });
+
+      const { error } = await supabase.functions.invoke("sync-deals");
+      if (error) throw error;
+
+      toast.success("Deals refreshed successfully!", { id: "sync-deals" });
+      await queryClient.invalidateQueries({ queryKey: ["deals"] });
+    } catch (error: any) {
+      console.error("Error syncing deals:", error);
+      toast.error(error?.message || "Failed to refresh deals. Please try again.", { id: "sync-deals" });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const { data: deals, isLoading, error } = useQuery({
     queryKey: ["deals"],
@@ -232,6 +269,18 @@ const Deals = () => {
                     Last updated {formatDistanceToNow(new Date(deals[0].fetchedAt), { addSuffix: true })}
                     {" · "}Refreshes every 5 minutes
                   </span>
+                  {session && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={syncDeals}
+                      disabled={isSyncing}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+                      Refresh Now
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
