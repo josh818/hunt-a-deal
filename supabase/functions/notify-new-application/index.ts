@@ -87,7 +87,8 @@ const handler = async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    const res = await fetch("https://api.resend.com/emails", {
+    // Send admin notification email
+    const adminRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -101,16 +102,73 @@ const handler = async (req: Request): Promise<Response> => {
       }),
     });
 
-    if (!res.ok) {
-      const error = await res.text();
-      console.error("Resend API error:", error);
-      throw new Error(`Failed to send email: ${error}`);
+    if (!adminRes.ok) {
+      const error = await adminRes.text();
+      console.error("Resend API error (admin):", error);
+      throw new Error(`Failed to send admin email: ${error}`);
     }
 
-    const data = await res.json();
-    console.log("Admin notification email sent successfully:", data);
+    const adminData = await adminRes.json();
+    console.log("Admin notification email sent successfully:", adminData);
 
-    return new Response(JSON.stringify({ success: true, data }), {
+    // Send confirmation email to applicant
+    const applicantHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #f97316;">Thank You for Applying! 🎉</h1>
+        <p style="font-size: 16px;">Hi there,</p>
+        <p>We've received your application for <strong>${application.organizationName}</strong> to join Relay Station.</p>
+        
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #374151;">What happens next?</h3>
+          <ul style="color: #4b5563; line-height: 1.8;">
+            <li>Our team will review your application within 24-48 hours</li>
+            <li>You'll receive an email once your application is approved</li>
+            <li>Once approved, you'll get access to your personalized deals page</li>
+          </ul>
+        </div>
+        
+        <div style="background: #dbeafe; padding: 16px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0; color: #1e40af;">
+            <strong>Your Application Details:</strong><br/>
+            Organization: ${application.organizationName}<br/>
+            Community Type: ${application.communityType}<br/>
+            Community Size: ${application.communitySize}
+          </p>
+        </div>
+        
+        <p>If you have any questions in the meantime, feel free to reach out to us.</p>
+        
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+        <p style="color: #6b7280; font-size: 14px;">
+          Best regards,<br/>
+          The Relay Station Team
+        </p>
+      </div>
+    `;
+
+    const applicantRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "Relay Station <noreply@relaystation.app>",
+        to: [application.applicantEmail],
+        subject: "We've Received Your Relay Station Application! 🚀",
+        html: applicantHtml,
+      }),
+    });
+
+    if (!applicantRes.ok) {
+      const error = await applicantRes.text();
+      console.error("Resend API error (applicant):", error);
+      // Don't throw here - admin email was sent successfully
+    } else {
+      console.log("Applicant confirmation email sent successfully");
+    }
+
+    return new Response(JSON.stringify({ success: true, data: adminData }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
