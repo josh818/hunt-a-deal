@@ -217,12 +217,15 @@ const ApplicationForm = () => {
           .from('projects')
           .insert({
             name: trimmedName,
-            description: `${trimmedDescription}\n\nCommunity Type: ${communityTypeValue}\nCommunity Size: ${trimmedCommunitySize}\nWebsite: ${formData.website.trim() || 'Not provided'}`,
+            description: trimmedDescription,
             logo_url: publicUrl,
             created_by: userId,
             tracking_code: uniqueTrackingCode,
             is_active: false, // Pending approval
             whatsapp_number: trimmedWhatsApp,
+            community_type: communityTypeValue,
+            community_size: trimmedCommunitySize,
+            website: formData.website.trim() || null,
           });
 
         if (!error) {
