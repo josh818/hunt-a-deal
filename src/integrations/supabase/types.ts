@@ -275,6 +275,8 @@ export type Database = {
       }
       projects: {
         Row: {
+          community_size: string | null
+          community_type: string | null
           created_at: string | null
           created_by: string
           description: string | null
@@ -285,9 +287,12 @@ export type Database = {
           slug: string | null
           tracking_code: string
           updated_at: string | null
+          website: string | null
           whatsapp_number: string | null
         }
         Insert: {
+          community_size?: string | null
+          community_type?: string | null
           created_at?: string | null
           created_by: string
           description?: string | null
@@ -298,9 +303,12 @@ export type Database = {
           slug?: string | null
           tracking_code: string
           updated_at?: string | null
+          website?: string | null
           whatsapp_number?: string | null
         }
         Update: {
+          community_size?: string | null
+          community_type?: string | null
           created_at?: string | null
           created_by?: string
           description?: string | null
@@ -311,6 +319,7 @@ export type Database = {
           slug?: string | null
           tracking_code?: string
           updated_at?: string | null
+          website?: string | null
           whatsapp_number?: string | null
         }
         Relationships: []
