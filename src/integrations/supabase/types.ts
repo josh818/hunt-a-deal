@@ -410,6 +410,32 @@ export type Database = {
           username: string
         }[]
       }
+      get_public_project_by_slug: {
+        Args: { project_slug: string }
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          logo_url: string
+          name: string
+          slug: string
+          tracking_code: string
+          whatsapp_number: string
+        }[]
+      }
+      get_public_projects: {
+        Args: never
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          logo_url: string
+          name: string
+          slug: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -39,27 +39,29 @@ const ProjectDeals = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // First, check if project exists at all (including inactive)
+  // First, check if project exists at all (including inactive) using secure RPC function
   const { data: projectCheck, isLoading: checkLoading, error: checkError, refetch: refetchCheck } = useQuery({
     queryKey: ['project-check', slug],
     queryFn: async () => {
       try {
+        // Use the secure RPC function to get public project info (excludes sensitive fields)
         const { data, error } = await supabase
-          .from('projects')
-          .select('id, name, is_active')
-          .eq('slug', slug)
+          .rpc('get_public_project_by_slug', { project_slug: slug })
           .maybeSingle();
 
         if (error) {
           console.error("Error checking project:", error);
-          toast({
-            title: "Error",
-            description: "Failed to load store. Please try again.",
-            variant: "destructive",
-          });
+          // Don't show toast for "not found" - that's expected for invalid slugs
+          if (error.code !== 'PGRST116') {
+            toast({
+              title: "Error",
+              description: "Failed to load store. Please try again.",
+              variant: "destructive",
+            });
+          }
           throw error;
         }
-        return data;
+        return data ? { id: data.id, name: data.name, is_active: data.is_active } : null;
       } catch (err) {
         console.error("Project check failed:", err);
         throw err;
@@ -70,15 +72,15 @@ const ProjectDeals = () => {
   });
 
   // Fetch full project details only if it exists and is active
+  // Uses secure RPC function to avoid exposing sensitive fields like created_by
   const { data: project, isLoading: projectLoading, error: projectError, refetch: refetchProject } = useQuery({
     queryKey: ['project', slug],
     queryFn: async () => {
       try {
+        // Use the secure RPC function - it excludes created_by but includes whatsapp_number
+        // WhatsApp is intentionally shared by project owners for customer contact
         const { data, error } = await supabase
-          .from('projects')
-          .select('id, name, slug, tracking_code, description, logo_url, whatsapp_number, is_active')
-          .eq('slug', slug)
-          .eq('is_active', true)
+          .rpc('get_public_project_by_slug', { project_slug: slug })
           .maybeSingle();
 
         if (error) {
@@ -90,6 +92,7 @@ const ProjectDeals = () => {
           });
           throw error;
         }
+        
         return data;
       } catch (err) {
         console.error("Project fetch failed:", err);
