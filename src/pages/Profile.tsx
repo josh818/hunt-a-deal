@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/FileUpload";
+import { LOGO_VALIDATION_OPTIONS, generateSecureFilename } from "@/utils/fileValidation";
 import { Footer } from "@/components/Footer";
 import { Loader2 } from "lucide-react";
 
@@ -81,12 +82,17 @@ const Profile = () => {
       let logoUrl = project.logo_url;
 
       if (logoFile) {
-        const fileExt = logoFile.name.split('.').pop();
-        const fileName = `${userId}/${Date.now()}.${fileExt}`;
+        // Generate secure, unpredictable filename to prevent enumeration attacks
+        const secureFilename = generateSecureFilename(logoFile.name);
+        const fileName = `${userId}/${secureFilename}`;
         
         const { error: uploadError } = await supabase.storage
           .from('project-logos')
-          .upload(fileName, logoFile);
+          .upload(fileName, logoFile, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: logoFile.type, // Explicitly set content type
+          });
 
         if (uploadError) throw uploadError;
 
@@ -209,10 +215,13 @@ const Profile = () => {
                 onFileSelect={setLogoFile}
                 onFileRemove={() => setLogoFile(null)}
                 currentFile={logoFile}
-                accept="image/*"
-                validationOptions={{ maxSizeInMB: 5 }}
+                accept=".jpg,.jpeg,.png,.webp"
+                validationOptions={LOGO_VALIDATION_OPTIONS}
                 validateImage={true}
               />
+              <p className="text-xs text-muted-foreground mt-2">
+                PNG, JPEG, or WebP only (max 2MB)
+              </p>
             </div>
 
             <div className="bg-muted p-4 rounded-lg">

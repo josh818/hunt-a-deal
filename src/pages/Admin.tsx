@@ -39,6 +39,7 @@ interface Project {
   slug: string;
   tracking_code: string;
   description: string | null;
+  logo_url: string | null;
   created_at: string;
   is_active: boolean;
 }
@@ -89,7 +90,7 @@ const Admin = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('id, name, slug, tracking_code, description, created_at, created_by, updated_at, is_active')
+        .select('id, name, slug, tracking_code, description, logo_url, created_at, created_by, updated_at, is_active')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
