@@ -1,5 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Settings, Users, Store, LogOut, LayoutDashboard } from "lucide-react";
@@ -15,6 +17,20 @@ import relayLogo from "@/assets/relay-station-logo-new.png";
 export const AdminNavigation = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Fetch pending applications count
+  const { data: pendingCount } = useQuery({
+    queryKey: ['pendingApplicationsCount'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', false);
+      
+      if (error) return 0;
+      return count || 0;
+    },
+  });
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -40,9 +56,14 @@ export const AdminNavigation = () => {
             </Link>
           </Button>
           <Button variant="ghost" asChild>
-            <Link to="/admin/applications">
-              <Users className="mr-2 h-4 w-4" />
+            <Link to="/admin/applications" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
               Applications
+              {pendingCount && pendingCount > 0 ? (
+                <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+                  {pendingCount}
+                </Badge>
+              ) : null}
             </Link>
           </Button>
           <Button variant="ghost" asChild>
