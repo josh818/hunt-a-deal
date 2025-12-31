@@ -6,14 +6,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Simple in-memory rate limiter (resets on function restart)
+// Simple in-memory rate limiter using request fingerprint (no IP storage)
 const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute in ms
-const MAX_REQUESTS_PER_WINDOW = 20; // Max 20 requests per minute per IP
+const MAX_REQUESTS_PER_WINDOW = 20; // Max 20 requests per minute
 
-function checkRateLimit(ip: string): boolean {
+function getRequestFingerprint(req: Request): string {
+  // Create a privacy-friendly fingerprint without storing IP
+  // Uses a hash of non-identifying request characteristics
+  const userAgent = req.headers.get('user-agent') || '';
+  const acceptLang = req.headers.get('accept-language') || '';
+  // Simple hash - not stored, just for rate limiting during session
+  return btoa(userAgent.substring(0, 50) + acceptLang.substring(0, 20)).substring(0, 20);
+}
+
+function checkRateLimit(fingerprint: string): boolean {
   const now = Date.now();
-  const timestamps = rateLimitMap.get(ip) || [];
+  const timestamps = rateLimitMap.get(fingerprint) || [];
   
   // Remove timestamps older than the window
   const validTimestamps = timestamps.filter(t => now - t < RATE_LIMIT_WINDOW);
@@ -24,7 +33,7 @@ function checkRateLimit(ip: string): boolean {
   
   // Add current timestamp
   validTimestamps.push(now);
-  rateLimitMap.set(ip, validTimestamps);
+  rateLimitMap.set(fingerprint, validTimestamps);
   
   return true;
 }
@@ -92,14 +101,12 @@ serve(async (req) => {
   }
 
   try {
-    // Get IP address for rate limiting
-    const ip = req.headers.get('cf-connecting-ip') || 
-               req.headers.get('x-forwarded-for') || 
-               'unknown';
+    // Privacy-friendly rate limiting (no IP storage)
+    const fingerprint = getRequestFingerprint(req);
 
     // Check rate limit
-    if (!checkRateLimit(ip)) {
-      console.warn(`Rate limit exceeded for IP: ${ip}`);
+    if (!checkRateLimit(fingerprint)) {
+      console.warn('Rate limit exceeded');
       return new Response(
         JSON.stringify({ error: 'Too many requests. Please try again later.' }),
         {
@@ -171,17 +178,10 @@ serve(async (req) => {
     const finalTargetUrl = applyTrackingCode(targetUrl, finalTrackingCode);
     console.log(`Tracking code applied: ${finalTrackingCode} to URL`);
 
-    // Get user agent and referer
-    const userAgent = req.headers.get('user-agent')?.substring(0, 500); // Limit length
-    const referer = req.headers.get('referer')?.substring(0, 500);
-
-    // Log the click with verified project ID
+    // Log the click with verified project ID (privacy-compliant: no IP, user agent, or referer stored)
     const { error: insertError } = await supabase.from('click_tracking').insert({
       deal_id: dealId,
       project_id: verifiedProjectId,
-      user_agent: userAgent,
-      referer: referer,
-      ip_address: ip,
     });
 
     if (insertError) {

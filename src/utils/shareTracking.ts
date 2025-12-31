@@ -15,13 +15,12 @@ interface TrackShareParams {
 
 export const trackShare = async ({ projectId, platform }: TrackShareParams): Promise<void> => {
   try {
+    // Privacy-compliant: no user agent or referer stored
     const { error } = await supabase
       .from('share_tracking')
       .insert({
         project_id: projectId,
         platform,
-        user_agent: navigator.userAgent,
-        referer: document.referrer || null,
       });
 
     if (error) {
