@@ -42,16 +42,22 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
     }
   };
 
-  // Apply tracking code to product URL
-  const trackedUrl = replaceTrackingCode(deal.productUrl, trackingCode);
+  // Apply tracking code to product URL (for display purposes)
+  // The actual tracking code will be applied server-side when clicked
+  const displayUrl = replaceTrackingCode(deal.productUrl, trackingCode);
 
-  const handleDealClick = async () => {
-    // Track the click
-    await trackClick({
+  const handleDealClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    
+    // Track the click and get the server-verified URL
+    const serverVerifiedUrl = await trackClick({
       dealId: deal.id,
       projectId,
-      targetUrl: trackedUrl,
+      targetUrl: deal.productUrl, // Send original URL, server will apply tracking code
     });
+
+    // Redirect to the server-verified URL, or fallback to display URL
+    window.open(serverVerifiedUrl || displayUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -197,9 +203,7 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
           asChild
         >
           <a
-            href={trackedUrl}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
+            href={displayUrl}
             onClick={handleDealClick}
           >
             <span className="sm:hidden">View Deal</span>

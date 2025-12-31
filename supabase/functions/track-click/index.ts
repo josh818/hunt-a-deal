@@ -38,13 +38,15 @@ function validateInput(dealId: any, projectId: any, targetUrl: any): { valid: bo
     return { valid: false, error: 'dealId too long' };
   }
 
-  // Validate projectId (should be UUID format)
-  if (!projectId || typeof projectId !== 'string') {
-    return { valid: false, error: 'Invalid projectId format' };
-  }
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(projectId)) {
-    return { valid: false, error: 'projectId must be a valid UUID' };
+  // Validate projectId (optional but must be UUID format if provided)
+  if (projectId !== undefined && projectId !== null) {
+    if (typeof projectId !== 'string') {
+      return { valid: false, error: 'Invalid projectId format' };
+    }
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(projectId)) {
+      return { valid: false, error: 'projectId must be a valid UUID' };
+    }
   }
 
   // Validate targetUrl
@@ -66,6 +68,22 @@ function validateInput(dealId: any, projectId: any, targetUrl: any): { valid: bo
   }
 
   return { valid: true };
+}
+
+// Function to apply tracking code to Amazon URLs server-side
+function applyTrackingCode(url: string, trackingCode: string): string {
+  try {
+    const urlObj = new URL(url);
+    
+    // Only apply tracking code to Amazon URLs
+    if (urlObj.hostname.includes('amazon.')) {
+      urlObj.searchParams.set('tag', trackingCode);
+    }
+    
+    return urlObj.toString();
+  } catch {
+    return url;
+  }
 }
 
 serve(async (req) => {
@@ -128,32 +146,39 @@ serve(async (req) => {
       );
     }
 
-    // Verify project exists
-    const { data: projectExists } = await supabase
-      .from('projects')
-      .select('id')
-      .eq('id', projectId)
-      .single();
+    let finalTrackingCode = 'dealstream0f-20'; // Default tracking code
+    let verifiedProjectId: string | null = null;
 
-    if (!projectExists) {
-      console.warn(`Project not found: ${projectId}`);
-      return new Response(
-        JSON.stringify({ error: 'Project not found' }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+    // If projectId provided, verify project exists and get its tracking code
+    if (projectId) {
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('id, tracking_code')
+        .eq('id', projectId)
+        .eq('is_active', true)
+        .single();
+
+      if (projectData) {
+        verifiedProjectId = projectData.id;
+        finalTrackingCode = projectData.tracking_code;
+        console.log(`Using project tracking code: ${finalTrackingCode} for project: ${verifiedProjectId}`);
+      } else {
+        console.warn(`Project not found or inactive: ${projectId}, using default tracking code`);
+      }
     }
+
+    // Apply tracking code server-side to ensure it cannot be manipulated
+    const finalTargetUrl = applyTrackingCode(targetUrl, finalTrackingCode);
+    console.log(`Tracking code applied: ${finalTrackingCode} to URL`);
 
     // Get user agent and referer
     const userAgent = req.headers.get('user-agent')?.substring(0, 500); // Limit length
     const referer = req.headers.get('referer')?.substring(0, 500);
 
-    // Log the click
+    // Log the click with verified project ID
     const { error: insertError } = await supabase.from('click_tracking').insert({
       deal_id: dealId,
-      project_id: projectId,
+      project_id: verifiedProjectId,
       user_agent: userAgent,
       referer: referer,
       ip_address: ip,
@@ -161,19 +186,23 @@ serve(async (req) => {
 
     if (insertError) {
       console.error("Error inserting click:", insertError);
-      throw insertError;
+      // Don't throw - we still want to redirect even if tracking fails
+    } else {
+      console.log(`Click tracked for deal ${dealId}${verifiedProjectId ? `, project ${verifiedProjectId}` : ''}`);
     }
 
-    console.log(`Click tracked for deal ${dealId}, project ${projectId}`);
-
-    // Redirect to target URL
-    return new Response(null, {
-      status: 302,
-      headers: {
-        ...corsHeaders,
-        'Location': targetUrl,
-      },
-    });
+    // Return success with the server-verified URL
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        redirectUrl: finalTargetUrl,
+        tracked: !insertError 
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error tracking click:", error);
     return new Response(

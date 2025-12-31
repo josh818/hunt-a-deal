@@ -12,6 +12,8 @@ import { ExternalLink, Star, ArrowLeft } from "lucide-react";
 import { replaceTrackingCode } from "@/utils/trackingCode";
 import { trackClick } from "@/utils/clickTracking";
 
+const DEFAULT_TRACKING_CODE = "dealstream0f-20";
+
 const fetchDeal = async (id: string): Promise<Deal | null> => {
   const { data, error } = await supabase
     .from("deals")
@@ -42,16 +44,51 @@ const fetchDeal = async (id: string): Promise<Deal | null> => {
   };
 };
 
-const DealLanding = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const trackingCode = localStorage.getItem("amazonTrackingCode") || "dealstream0f-20";
+interface Project {
+  id: string;
+  tracking_code: string;
+  name: string;
+}
 
-  const { data: deal, isLoading, error } = useQuery({
+const fetchProject = async (slug: string): Promise<Project | null> => {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("id, tracking_code, name")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error fetching project:", error);
+    return null;
+  }
+  
+  return data;
+};
+
+const DealLanding = () => {
+  const { id, slug } = useParams<{ id: string; slug?: string }>();
+  const navigate = useNavigate();
+
+  // Fetch project if slug is provided (server-side tracking code)
+  const { data: project, isLoading: projectLoading } = useQuery({
+    queryKey: ["project-for-deal", slug],
+    queryFn: () => fetchProject(slug!),
+    enabled: !!slug,
+  });
+
+  // Get tracking code from project (server-side) or use default
+  // No more localStorage - tracking code comes from database only
+  const trackingCode = project?.tracking_code || DEFAULT_TRACKING_CODE;
+  const projectId = project?.id;
+
+  const { data: deal, isLoading: dealLoading, error } = useQuery({
     queryKey: ["deal", id],
     queryFn: () => fetchDeal(id!),
     enabled: !!id,
   });
+
+  const isLoading = dealLoading || (slug && projectLoading);
 
   if (isLoading) {
     return (
@@ -79,7 +116,7 @@ const DealLanding = () => {
           <p className="text-muted-foreground mb-6">
             The deal you're looking for doesn't exist or has been removed.
           </p>
-          <Button onClick={() => navigate("/deals")}>
+          <Button onClick={() => navigate(slug ? `/project/${slug}/deals` : "/deals")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Deals
           </Button>
@@ -92,13 +129,29 @@ const DealLanding = () => {
     ? ((deal.originalPrice - deal.price) / deal.originalPrice * 100).toFixed(0)
     : deal.discount;
 
-  const trackedUrl = replaceTrackingCode(deal.productUrl, trackingCode);
+  // Display URL for showing link (actual tracking applied server-side)
+  const displayUrl = replaceTrackingCode(deal.productUrl, trackingCode);
 
-  const handleDealClick = async () => {
-    await trackClick({
+  const handleDealClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    
+    // Track the click and get the server-verified URL with correct tracking code
+    const serverVerifiedUrl = await trackClick({
       dealId: deal.id,
-      targetUrl: trackedUrl,
+      targetUrl: deal.productUrl, // Send original URL, server applies tracking code
+      projectId: projectId,
     });
+
+    // Redirect to the server-verified URL, or fallback to display URL
+    window.open(serverVerifiedUrl || displayUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleBackClick = () => {
+    if (slug) {
+      navigate(`/project/${slug}/deals`);
+    } else {
+      navigate("/deals");
+    }
   };
 
   return (
@@ -106,11 +159,11 @@ const DealLanding = () => {
       <div className="container mx-auto px-4 py-8">
         <Button
           variant="ghost"
-          onClick={() => navigate("/deals")}
+          onClick={handleBackClick}
           className="mb-6"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Deals
+          {slug && project ? `Back to ${project.name}` : "Back to Deals"}
         </Button>
 
         <div className="grid md:grid-cols-2 gap-8 mb-12">
@@ -202,9 +255,7 @@ const DealLanding = () => {
                 asChild
               >
                 <a
-                  href={trackedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
+                  href={displayUrl}
                   onClick={handleDealClick}
                 >
                   View Deal on Amazon
