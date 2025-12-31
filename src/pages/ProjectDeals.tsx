@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { replaceTrackingCode } from "@/utils/trackingCode";
+import { trackShare } from "@/utils/shareTracking";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -183,12 +184,15 @@ const ProjectDeals = () => {
 
   // Native Web Share API
   const handleNativeShare = async () => {
+    if (!project) return;
     try {
       await navigator.share({
-        title: `${project?.name} - Deals`,
+        title: `${project.name} - Deals`,
         text: getShareText(),
         url: getShareUrl(),
       });
+      // Track after successful share
+      trackShare({ projectId: project.id, platform: 'native_share' });
     } catch (err) {
       // User cancelled or share failed - fall back silently
       if ((err as Error).name !== 'AbortError') {
@@ -200,6 +204,9 @@ const ProjectDeals = () => {
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(getShareUrl());
+      if (project) {
+        trackShare({ projectId: project.id, platform: 'copy_link' });
+      }
       toast({
         title: "Link Copied!",
         description: "Store link copied to clipboard",
@@ -214,22 +221,34 @@ const ProjectDeals = () => {
   };
 
   const handleShareTwitter = () => {
+    if (project) {
+      trackShare({ projectId: project.id, platform: 'twitter' });
+    }
     const text = encodeURIComponent(getShareText());
     const url = encodeURIComponent(getShareUrl());
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
   };
 
   const handleShareFacebook = () => {
+    if (project) {
+      trackShare({ projectId: project.id, platform: 'facebook' });
+    }
     const url = encodeURIComponent(getShareUrl());
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
   };
 
   const handleShareWhatsApp = () => {
+    if (project) {
+      trackShare({ projectId: project.id, platform: 'whatsapp' });
+    }
     const text = encodeURIComponent(`${getShareText()} ${getShareUrl()}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
   const handleShareEmail = () => {
+    if (project) {
+      trackShare({ projectId: project.id, platform: 'email' });
+    }
     const subject = encodeURIComponent(`Check out ${project?.name} - Amazing Deals!`);
     const body = encodeURIComponent(`${getShareText()}\n\n${getShareUrl()}`);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
