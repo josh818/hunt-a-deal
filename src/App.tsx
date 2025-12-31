@@ -26,6 +26,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import AdminApplications from "./pages/AdminApplications";
 import ResetPassword from "./pages/ResetPassword";
+import EmailPreview from "./pages/EmailPreview";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/project/:slug/deals" element={<ProjectDeals />} />
             <Route path="/project/:slug/social" element={<ProjectSocial />} />
             <Route path="/logo-editor" element={<LogoEditor />} />
+            <Route path="/admin/email-preview" element={<EmailPreview />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
