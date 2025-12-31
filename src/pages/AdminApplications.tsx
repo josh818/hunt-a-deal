@@ -183,9 +183,14 @@ const AdminApplications = () => {
       // Send approval email notification
       await sendApplicationEmail(selectedApp.created_by, "approved", selectedApp.name, slug);
 
+      const fullUrl = `https://hunt-a-deal.lovable.app/project/${slug}/deals`;
+      
+      // Copy URL to clipboard
+      await navigator.clipboard.writeText(fullUrl);
+
       toast({
-        title: "Success",
-        description: `Project activated! Site URL: /project/${slug}/deals`,
+        title: "Project Activated!",
+        description: `URL copied to clipboard: ${fullUrl}`,
         duration: 10000,
       });
 
