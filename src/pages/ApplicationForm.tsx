@@ -246,6 +246,20 @@ const ApplicationForm = () => {
         throw new Error("Failed to generate unique application ID. Please try again.");
       }
 
+      // Send notification email to admin (don't block on this)
+      const { data: { user } } = await supabase.auth.getUser();
+      supabase.functions.invoke('notify-new-application', {
+        body: {
+          organizationName: trimmedName,
+          communityType: communityTypeValue,
+          communitySize: trimmedCommunitySize,
+          description: trimmedDescription,
+          website: formData.website.trim() || undefined,
+          whatsappNumber: trimmedWhatsApp,
+          applicantEmail: user?.email || 'Unknown',
+        },
+      }).catch(err => console.error('Failed to send admin notification:', err));
+
       toast({
         title: "Application Submitted!",
         description: "We'll review your application and contact you within 1-2 business days.",
