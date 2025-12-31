@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const ADMIN_EMAIL = "admin@relaystation.app"; // Change this to your admin email
+const ADMIN_EMAILS = ["joshuahay@gmail.com", "jyudin@gmail.com"];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,7 +95,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: "Relay Station <noreply@relaystation.app>",
-        to: [ADMIN_EMAIL],
+        to: ADMIN_EMAILS,
         subject: `🆕 New Application: ${application.organizationName}`,
         html,
       }),
