@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Store, TrendingUp, Users, ExternalLink, Clock, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/Footer";
+import { ShareAnalytics } from "@/components/ShareAnalytics";
 
 interface UserProject {
   id: string;
@@ -278,6 +279,9 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Share Analytics */}
+        <ShareAnalytics projectId={project.id} />
       </div>
       <Footer />
     </div>
