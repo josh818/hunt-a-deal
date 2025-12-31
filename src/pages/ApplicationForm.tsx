@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/FileUpload";
+import { LOGO_VALIDATION_OPTIONS, generateSecureFilename, getFileExtension } from "@/utils/fileValidation";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PublicNavigation } from "@/components/PublicNavigation";
@@ -175,15 +176,17 @@ const ApplicationForm = () => {
 
       // Upload logo if provided (now optional)
       if (logoFile) {
-        const fileExt = logoFile.name.split('.').pop()?.toLowerCase() || 'png';
-        const uniqueFileId = crypto.randomUUID();
-        const fileName = `${userId}/${uniqueFileId}.${fileExt}`;
+        // Generate secure, unpredictable filename to prevent enumeration attacks
+        const extension = getFileExtension(logoFile.name);
+        const secureFilename = generateSecureFilename(logoFile.name);
+        const fileName = `${userId}/${secureFilename}`;
         
         const { error: uploadError } = await supabase.storage
           .from('project-logos')
           .upload(fileName, logoFile, {
             cacheControl: '3600',
-            upsert: false
+            upsert: false,
+            contentType: logoFile.type, // Explicitly set content type
           });
 
         if (uploadError) {
@@ -437,12 +440,12 @@ const ApplicationForm = () => {
                     onFileSelect={setLogoFile}
                     onFileRemove={() => setLogoFile(null)}
                     currentFile={logoFile}
-                    accept="image/*"
-                    validationOptions={{ maxSizeInMB: 5 }}
+                    accept=".jpg,.jpeg,.png,.webp"
+                    validationOptions={LOGO_VALIDATION_OPTIONS}
                     validateImage={true}
                   />
                   <p className="text-sm text-muted-foreground">
-                    Upload your organization's logo (max 5MB). You can add this later.
+                    Upload your organization's logo (PNG, JPEG, or WebP only, max 2MB). You can add this later.
                   </p>
                 </div>
 
