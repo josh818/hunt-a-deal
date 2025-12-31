@@ -10,8 +10,9 @@ import { FilterBar, Filters } from "@/components/FilterBar";
 import { Deal } from "@/types/deal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { getDefaultTrackingCode } from "@/utils/trackingCode";
+import { formatDistanceToNow } from "date-fns";
 
 const fetchDeals = async (): Promise<Deal[]> => {
   // Fetch deals from our database cache
@@ -217,13 +218,22 @@ const Deals = () => {
           </>
         ) : deals && deals.length > 0 ? (
           <>
-            <div className="mb-4 sm:mb-6">
+            <div className="mb-4 sm:mb-6 space-y-3">
               <FilterBar
                 filters={filters}
                 onFiltersChange={setFilters}
                 categories={categories}
                 totalResults={filteredDeals.length}
               />
+              {deals[0]?.fetchedAt && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <RefreshCw className="h-3 w-3" />
+                  <span>
+                    Last updated {formatDistanceToNow(new Date(deals[0].fetchedAt), { addSuffix: true })}
+                    {" · "}Refreshes every 5 minutes
+                  </span>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {filteredDeals.map((deal) => (
