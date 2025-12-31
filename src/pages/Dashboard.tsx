@@ -9,6 +9,7 @@ import { Store, TrendingUp, Users, ExternalLink, Clock, Loader2, AlertCircle } f
 import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/Footer";
 import { ShareAnalytics } from "@/components/ShareAnalytics";
+import { ClickAnalytics } from "@/components/ClickAnalytics";
 
 interface UserProject {
   id: string;
@@ -280,8 +281,15 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Click Analytics */}
+        <div className="mt-8">
+          <ClickAnalytics projectId={project.id} />
+        </div>
+
         {/* Share Analytics */}
-        <ShareAnalytics projectId={project.id} />
+        <div className="mt-8">
+          <ShareAnalytics projectId={project.id} />
+        </div>
       </div>
       <Footer />
     </div>
