@@ -35,11 +35,15 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
   const savingsDisplay = savings && savings > 0 ? savings.toFixed(0) : null;
   
   // Generate deal link for sharing
+  // When on a project page (slug exists), always use project URL to preserve tracking
+  // When on general deals page, use the generic deal URL
   const getDealShareUrl = () => {
     const baseUrl = window.location.origin;
+    // If we have a slug from the URL, always use the project URL to preserve tracking
     if (slug) {
       return `${baseUrl}/project/${slug}/deal/${deal.id}`;
     }
+    // For non-project pages, use generic deal URL (uses default Relay Station tracking)
     return `${baseUrl}/deal/${deal.id}`;
   };
   
@@ -63,7 +67,9 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
     const shareUrl = getDealShareUrl();
     const shareText = `Check out this deal: ${deal.title} - $${deal.price.toFixed(2)}${savingsDisplay ? ` (${savingsDisplay}% OFF)` : ''}`;
     
-    // Track the share
+    // Track the share - only if we have a projectId (on project pages)
+    // Note: The share URL already includes the project slug if on a project page,
+    // which ensures the recipient uses the project's tracking code when they click through
     if (projectId) {
       const platformMap: Record<string, 'facebook' | 'twitter' | 'whatsapp' | 'copy_link'> = {
         'facebook': 'facebook',
@@ -73,6 +79,7 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
       };
       await trackShare({ projectId, platform: platformMap[platform] || 'copy_link' });
     }
+    // When not on a project page, sharing still works but uses default Relay Station tracking
     
     switch (platform) {
       case 'facebook':
