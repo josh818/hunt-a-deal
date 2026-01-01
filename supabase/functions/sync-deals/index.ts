@@ -21,6 +21,7 @@ interface DealResponse {
   title?: string;
   url?: string;
   image?: string;
+  image_url?: string;
   description?: string;
   category?: string;
   rating?: string | number;
@@ -126,21 +127,20 @@ Deno.serve(async (req) => {
         return parseFloat(cleaned) || 0;
       };
 
-      // Extract ASIN from Amazon URL and build image URL through proxy
-      const getImageUrl = (url?: string, providedImage?: string, title?: string): string => {
-        // Only use providedImage if it's a valid URL (not empty/null)
-        if (providedImage && providedImage.trim() && providedImage.startsWith('http')) {
-          return providedImage;
+      // Get image URL - prioritize provided image, fall back to Slickdeals image pattern
+      const getImageUrl = (item: DealResponse): string => {
+        // If API provides a direct image URL (Slickdeals CDN), use it
+        if (item.image_url && item.image_url.trim() && item.image_url.startsWith('http')) {
+          return item.image_url;
         }
         
-        if (!url) {
-          return "/placeholder.svg";
+        // Check for image field
+        if (item.image && item.image.trim() && item.image.startsWith('http')) {
+          return item.image;
         }
         
-        // Use image proxy to scrape the actual image from the Amazon product page
-        // Include title for AI fallback generation
-        const titleParam = title ? `&title=${encodeURIComponent(title)}` : '';
-        return `${supabaseUrl}/functions/v1/image-proxy?url=${encodeURIComponent(url)}${titleParam}`;
+        // Fallback to placeholder
+        return "/placeholder.svg";
       };
 
       let price = parsePrice(item.price);
@@ -217,9 +217,9 @@ Deno.serve(async (req) => {
         title: item.title || "Product",
         description: item.description || null,
         price: price,
+        image_url: getImageUrl(item),
         original_price: originalPrice > 0 ? originalPrice : null,
         discount: discount,
-        image_url: getImageUrl(item.url, item.image, item.title),
         product_url: item.url || "",
         category: extractCategory(item.title),
         rating: item.rating ? parseFloat(String(item.rating)) : null,

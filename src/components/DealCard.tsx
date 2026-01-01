@@ -47,9 +47,10 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
     return `${baseUrl}/deal/${deal.id}`;
   };
   
-  const isDealExpired = deal.postedAt 
-    ? differenceInHours(new Date(), new Date(deal.postedAt)) > 25
-    : false;
+  // Only show "may have expired" for deals posted more than 48 hours ago
+  // Use fetchedAt as fallback if postedAt is not available
+  const dealDate = deal.postedAt ? new Date(deal.postedAt) : (deal.fetchedAt ? new Date(deal.fetchedAt) : null);
+  const isDealExpired = dealDate ? differenceInHours(new Date(), dealDate) > 48 : false;
 
   const handleCopyCoupon = async () => {
     if (deal.couponCode) {
@@ -127,8 +128,11 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
         )}
         {imageError ? (
           <div className="h-full w-full flex flex-col items-center justify-center bg-muted">
-            <ImageOff className="h-16 w-16 text-muted-foreground/50 mb-2" />
-            <p className="text-sm text-muted-foreground">Image unavailable</p>
+            <div className="text-center p-4">
+              <p className="font-semibold text-sm text-primary mb-1">Relay Station</p>
+              <p className="text-xs text-muted-foreground line-clamp-2">{deal.title}</p>
+              <p className="text-xs text-muted-foreground mt-2">Image Loading Failed</p>
+            </div>
           </div>
         ) : (
           <img 
@@ -141,7 +145,8 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
             onLoad={() => setImageLoaded(true)}
             onError={(e) => {
               const img = e.target as HTMLImageElement;
-              if (!img.src.includes('placeholder.svg')) {
+              // Try placeholder first, then show error state
+              if (!img.src.includes('placeholder.svg') && !imageError) {
                 img.src = '/placeholder.svg';
               } else {
                 setImageError(true);
