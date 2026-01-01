@@ -5,11 +5,12 @@ import { RoleBasedNavigation } from "@/components/RoleBasedNavigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Store, TrendingUp, Users, ExternalLink, Clock, Loader2, AlertCircle } from "lucide-react";
+import { Store, TrendingUp, Users, ExternalLink, Clock, Loader2, AlertCircle, Sparkles, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Footer } from "@/components/Footer";
 import { ShareAnalytics } from "@/components/ShareAnalytics";
 import { ClickAnalytics } from "@/components/ClickAnalytics";
+import { formatDistanceToNow, differenceInHours } from "date-fns";
 
 interface UserProject {
   id: string;
@@ -20,6 +21,9 @@ interface UserProject {
   is_active: boolean;
   slug: string | null;
   whatsapp_number: string | null;
+  total_earnings: number | null;
+  pending_earnings: number | null;
+  paid_earnings: number | null;
 }
 
 const Dashboard = () => {
@@ -29,6 +33,8 @@ const Dashboard = () => {
   const [project, setProject] = useState<UserProject | null>(null);
   const [clickCount, setClickCount] = useState(0);
   const [dealCount, setDealCount] = useState(0);
+  const [newDealsCount, setNewDealsCount] = useState(0);
+  const [latestDealTime, setLatestDealTime] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuthAndLoadData = async () => {
@@ -82,12 +88,26 @@ const Dashboard = () => {
           setClickCount(clicks || 0);
         }
 
-        // Fetch deal count
-        const { count: deals } = await supabase
+        // Fetch deal count and check for new deals (posted in last 4 hours)
+        const { data: dealsData, count: deals } = await supabase
           .from("deals")
-          .select("*", { count: "exact", head: true });
+          .select("fetched_at, posted_at", { count: "exact" })
+          .order("fetched_at", { ascending: false })
+          .limit(1);
         
         setDealCount(deals || 0);
+        
+        // Count deals posted in last 4 hours as "new"
+        if (dealsData && dealsData.length > 0) {
+          setLatestDealTime(dealsData[0].fetched_at);
+          
+          const { count: newDeals } = await supabase
+            .from("deals")
+            .select("*", { count: "exact", head: true })
+            .gte("posted_at", new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString());
+          
+          setNewDealsCount(newDeals || 0);
+        }
       } catch (error) {
         console.error("Dashboard error:", error);
       } finally {
@@ -208,15 +228,48 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+        {/* New Deals Alert */}
+        {newDealsCount > 0 && (
+          <Card className="mb-6 border-primary/50 bg-primary/5">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{newDealsCount} New {newDealsCount === 1 ? 'Deal' : 'Deals'} Available!</p>
+                    <p className="text-sm text-muted-foreground">Posted in the last 4 hours</p>
+                  </div>
+                </div>
+                <Button onClick={() => navigate(project.slug ? `/project/${project.slug}/deals` : "/deals")} size="sm">
+                  View Deals
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$0.00</div>
-              <p className="text-xs text-muted-foreground">Coming soon</p>
+              <div className="text-2xl font-bold">${(project.total_earnings || 0).toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">All time</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Pending Earnings</CardTitle>
+              <TrendingUp className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">${(project.pending_earnings || 0).toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Awaiting payout</p>
             </CardContent>
           </Card>
 
@@ -231,14 +284,26 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="relative">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Active Deals</CardTitle>
               <Store className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{dealCount}</div>
-              <p className="text-xs text-muted-foreground">Updated daily</p>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold">{dealCount}</span>
+                {newDealsCount > 0 && (
+                  <Badge className="bg-primary text-primary-foreground text-xs">
+                    +{newDealsCount} new
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {latestDealTime 
+                  ? `Updated ${formatDistanceToNow(new Date(latestDealTime), { addSuffix: true })}`
+                  : 'Updated daily'
+                }
+              </p>
             </CardContent>
           </Card>
         </div>
