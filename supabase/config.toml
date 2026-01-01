@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.send-application-email]
 verify_jwt = false
+
+[functions.og-image]
+verify_jwt = false
