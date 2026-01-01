@@ -43,68 +43,130 @@ Deno.serve(async (req) => {
       ? Math.round(((deal.original_price - deal.price) / deal.original_price) * 100) 
       : deal.discount || 0;
 
-    // Generate an SVG-based OG image
-    const svg = `
-      <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#1a1a2e"/>
-            <stop offset="100%" style="stop-color:#16213e"/>
-          </linearGradient>
-          <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#e94560"/>
-            <stop offset="100%" style="stop-color:#ff6b6b"/>
-          </linearGradient>
-        </defs>
-        
-        <!-- Background -->
-        <rect width="1200" height="630" fill="url(#bg)"/>
-        
-        <!-- Accent bar -->
-        <rect width="1200" height="8" fill="url(#accent)"/>
-        
-        <!-- Content area -->
-        <rect x="40" y="40" width="400" height="550" rx="12" fill="#ffffff" fill-opacity="0.05"/>
-        
-        <!-- Brand -->
-        <text x="60" y="90" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#e94560">RELAY STATION</text>
-        
-        <!-- Deal badge -->
-        ${discount > 0 ? `
-        <rect x="960" y="40" width="200" height="80" rx="8" fill="#e94560"/>
-        <text x="1060" y="95" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">${discount}% OFF</text>
-        ` : ''}
-        
-        <!-- Title -->
-        <text x="60" y="180" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" width="1080">
-          ${escapeXml(truncate(deal.title, 60))}
-        </text>
-        
-        <!-- Price section -->
-        <text x="60" y="280" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#4ade80">$${deal.price.toFixed(2)}</text>
-        ${deal.original_price ? `
-        <text x="60" y="340" font-family="Arial, sans-serif" font-size="32" fill="#888888" text-decoration="line-through">Was $${deal.original_price.toFixed(2)}</text>
-        ` : ''}
-        
-        <!-- Category badge -->
-        ${deal.category ? `
-        <rect x="60" y="380" width="${Math.min(deal.category.length * 16 + 40, 300)}" height="40" rx="20" fill="#e94560" fill-opacity="0.2"/>
-        <text x="80" y="408" font-family="Arial, sans-serif" font-size="18" fill="#e94560">${escapeXml(deal.category)}</text>
-        ` : ''}
-        
-        <!-- CTA -->
-        <rect x="60" y="520" width="300" height="60" rx="8" fill="url(#accent)"/>
-        <text x="210" y="560" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle">View Deal →</text>
-        
-        <!-- Footer -->
-        <text x="1140" y="600" font-family="Arial, sans-serif" font-size="16" fill="#666666" text-anchor="end">relaystation.app</text>
-      </svg>
-    `;
+    const title = escapeHtml(truncate(deal.title, 80));
+    const price = `$${deal.price.toFixed(2)}`;
+    const originalPrice = deal.original_price ? `$${deal.original_price.toFixed(2)}` : '';
+    const category = deal.category || '';
 
-    return new Response(svg, {
+    // Generate HTML that will be rendered as image
+    // Using a simple HTML approach that's more compatible
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 1200px;
+      height: 630px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding: 40px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+    }
+    .brand {
+      font-size: 28px;
+      font-weight: bold;
+      color: #e94560;
+    }
+    .discount-badge {
+      background: #e94560;
+      padding: 16px 32px;
+      border-radius: 8px;
+      font-size: 32px;
+      font-weight: bold;
+    }
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .title {
+      font-size: 42px;
+      font-weight: bold;
+      margin-bottom: 24px;
+      line-height: 1.2;
+    }
+    .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+    .current-price {
+      font-size: 72px;
+      font-weight: bold;
+      color: #4ade80;
+    }
+    .original-price {
+      font-size: 36px;
+      color: #888;
+      text-decoration: line-through;
+    }
+    .category {
+      display: inline-block;
+      background: rgba(233, 69, 96, 0.2);
+      color: #e94560;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 18px;
+      margin-top: 20px;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 40px;
+    }
+    .cta {
+      background: linear-gradient(90deg, #e94560, #ff6b6b);
+      padding: 20px 40px;
+      border-radius: 8px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .domain {
+      color: #666;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">RELAY STATION</div>
+    ${discount > 0 ? `<div class="discount-badge">${discount}% OFF</div>` : ''}
+  </div>
+  <div class="content">
+    <div class="title">${title}</div>
+    <div class="price-row">
+      <span class="current-price">${price}</span>
+      ${originalPrice ? `<span class="original-price">Was ${originalPrice}</span>` : ''}
+    </div>
+    ${category ? `<span class="category">${escapeHtml(category)}</span>` : ''}
+  </div>
+  <div class="footer">
+    <div class="cta">View Deal →</div>
+    <div class="domain">hunt-a-deal.lovable.app</div>
+  </div>
+</body>
+</html>`;
+
+    // Return HTML that can be screenshot by social platforms
+    // Most platforms will render this or we can use a screenshot service
+    return new Response(html, {
       headers: {
         ...corsHeaders,
-        'Content-Type': 'image/svg+xml',
+        'Content-Type': 'text/html',
         'Cache-Control': 'public, max-age=3600',
       },
     });
@@ -118,13 +180,13 @@ Deno.serve(async (req) => {
   }
 });
 
-function escapeXml(text: string): string {
+function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+    .replace(/'/g, '&#39;');
 }
 
 function truncate(text: string, maxLength: number): string {

@@ -11,12 +11,31 @@ serve(async (req) => {
   }
 
   try {
-    const { deal, trackedUrl, pageUrl } = await req.json();
+    const body = await req.json();
+    const { deal, trackedUrl, pageUrl } = body;
+    
+    console.log("Received request:", { 
+      dealTitle: deal?.title, 
+      hasTrackedUrl: !!trackedUrl, 
+      pageUrl 
+    });
+    
+    if (!deal || !deal.title) {
+      throw new Error("Deal data is missing or invalid");
+    }
+    
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY is not configured in environment");
       throw new Error("LOVABLE_API_KEY is not configured");
     }
+
+    // Safely format price values
+    const formatPrice = (price: number | undefined) => {
+      if (price === undefined || price === null) return "N/A";
+      return `$${Number(price).toFixed(2)}`;
+    };
 
     // Create an engaging prompt for the AI
     const prompt = `Create an engaging social media post for this product deal:
@@ -24,8 +43,8 @@ serve(async (req) => {
 Product: ${deal.title}
 Brand: ${deal.brand || "N/A"}
 Category: ${deal.category || "N/A"}
-Current Price: $${deal.price.toFixed(2)}
-${deal.originalPrice ? `Original Price: $${deal.originalPrice.toFixed(2)}` : ""}
+Current Price: ${formatPrice(deal.price)}
+${deal.originalPrice ? `Original Price: ${formatPrice(deal.originalPrice)}` : ""}
 ${deal.discount ? `Discount: ${Math.round(deal.discount)}% OFF` : ""}
 
 Requirements:

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Tag, Share2, Sparkles, Folder, Settings, Clock, BarChart3, Shield, LogOut, RefreshCw, Menu } from "lucide-react";
+import { Home, Tag, Share2, Sparkles, Folder, Settings, Clock, BarChart3, Shield, LogOut, RefreshCw, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,6 +68,7 @@ export const Navigation = () => {
     { path: "/test12345/sociallinks", label: "Social Deals", icon: Share2 },
     { path: "/social-links-generator", label: "AI Generator", icon: Sparkles },
     { path: "/projects", label: "Projects", icon: Folder },
+    { path: "/profile", label: "Account", icon: User },
   ];
 
   const adminItems = isAdmin ? [
