@@ -479,24 +479,6 @@ const ProjectDeals = () => {
                   {dealCount} {dealCount === 1 ? 'Deal' : 'Deals'} Available
                 </Badge>
                 
-                {project.whatsapp_number && (
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="gap-2 text-green-600 border-green-600/30 hover:bg-green-50 hover:text-green-700"
-                    asChild
-                  >
-                    <a 
-                      href={getWhatsAppLink(project.whatsapp_number)} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      <span className="hidden sm:inline">Contact on WhatsApp</span>
-                      <span className="sm:hidden">WhatsApp</span>
-                    </a>
-                  </Button>
-                )}
 
                 {/* Share Button - Native on mobile, dropdown on desktop */}
                 {canNativeShare ? (

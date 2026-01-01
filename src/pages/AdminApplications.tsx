@@ -6,11 +6,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, Clock, Code, Loader2, ExternalLink, User, Eye } from "lucide-react";
+import { 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  Code, 
+  Loader2, 
+  ExternalLink, 
+  User, 
+  Eye, 
+  Edit, 
+  Save,
+  Store,
+  MousePointer,
+  DollarSign,
+  Calendar,
+  Globe,
+  Users,
+  X
+} from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Footer } from "@/components/Footer";
+import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
 
 interface Application {
   id: string;
@@ -26,6 +48,13 @@ interface Application {
   website: string | null;
   community_type: string | null;
   community_size: string | null;
+  total_earnings: number | null;
+  pending_earnings: number | null;
+  paid_earnings: number | null;
+  address_line1: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
 }
 
 interface UserProfile {
@@ -41,7 +70,6 @@ const sendApplicationEmail = async (
   projectSlug?: string
 ) => {
   try {
-    // Get user email from profiles
     const { data: profile } = await supabase
       .from("profiles")
       .select("email")
@@ -82,6 +110,18 @@ const AdminApplications = () => {
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [clickCount, setClickCount] = useState(0);
+  const [shareCount, setShareCount] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    tracking_code: "",
+    slug: "",
+    website: "",
+    community_type: "",
+    community_size: "",
+  });
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -145,7 +185,6 @@ const AdminApplications = () => {
       return;
     }
 
-    // Validate Amazon tracking code ends with -20
     if (!amazonCode.trim().endsWith("-20")) {
       toast({
         title: "Invalid Tracking Code",
@@ -156,13 +195,11 @@ const AdminApplications = () => {
     }
 
     try {
-      // Generate base slug from name
       let baseSlug = selectedApp.name
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric with dashes
-        .replace(/^-+|-+$/g, '');      // Remove leading/trailing dashes
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
 
-      // Check if slug exists and make unique if needed
       let slug = baseSlug;
       let slugCounter = 1;
       
@@ -175,14 +212,13 @@ const AdminApplications = () => {
           .maybeSingle();
 
         if (!existingProject) {
-          break; // Slug is unique
+          break;
         }
 
         slugCounter++;
         slug = `${baseSlug}-${slugCounter}`;
       }
       
-      // Update project with Amazon code, slug, and activate it
       const { error } = await supabase
         .from("projects")
         .update({ 
@@ -194,12 +230,10 @@ const AdminApplications = () => {
 
       if (error) throw error;
 
-      // Send approval email notification
       await sendApplicationEmail(selectedApp.created_by, "approved", selectedApp.name, slug);
 
       const fullUrl = `https://hunt-a-deal.lovable.app/project/${slug}/deals`;
       
-      // Copy URL to clipboard
       await navigator.clipboard.writeText(fullUrl);
 
       toast({
@@ -222,7 +256,6 @@ const AdminApplications = () => {
   };
 
   const handleReject = async (app: Application) => {
-    // Send rejection email before deleting
     await sendApplicationEmail(app.created_by, "rejected", app.name);
 
     const { error } = await supabase
@@ -245,6 +278,87 @@ const AdminApplications = () => {
     }
   };
 
+  const handleViewStore = async (app: Application) => {
+    setViewingApp(app);
+    setIsViewDialogOpen(true);
+    setIsEditing(false);
+    setEditForm({
+      name: app.name,
+      description: app.description || "",
+      tracking_code: app.tracking_code,
+      slug: app.slug || "",
+      website: app.website || "",
+      community_type: app.community_type || "",
+      community_size: app.community_size || "",
+    });
+    
+    // Fetch user profile
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", app.created_by)
+      .single();
+    setViewingUser(profile);
+    
+    // Fetch click count
+    const { count: clicks } = await supabase
+      .from("click_tracking")
+      .select("*", { count: "exact", head: true })
+      .eq("project_id", app.id);
+    setClickCount(clicks || 0);
+
+    // Fetch share count
+    const { count: shares } = await supabase
+      .from("share_tracking")
+      .select("*", { count: "exact", head: true })
+      .eq("project_id", app.id);
+    setShareCount(shares || 0);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!viewingApp) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("projects")
+        .update({
+          name: editForm.name,
+          description: editForm.description,
+          tracking_code: editForm.tracking_code,
+          slug: editForm.slug,
+          website: editForm.website,
+          community_type: editForm.community_type,
+          community_size: editForm.community_size,
+        })
+        .eq("id", viewingApp.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Store details updated successfully",
+      });
+
+      setIsEditing(false);
+      loadApplications();
+      
+      // Update local state
+      setViewingApp({
+        ...viewingApp,
+        ...editForm,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update store",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -264,12 +378,13 @@ const AdminApplications = () => {
       <AdminNavigation />
       
       <div className="flex-1 container mx-auto px-4 py-8 sm:py-12">
-        <h1 className="text-4xl font-bold mb-8">Application Management</h1>
+        <h1 className="text-4xl font-bold mb-8">Store Management</h1>
 
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
-            <CardHeader>
-              <CardTitle>Pending Review</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{pendingApplications.length}</div>
@@ -277,17 +392,17 @@ const AdminApplications = () => {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Active Stores</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Active Stores</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{activeStores.length}</div>
+              <div className="text-3xl font-bold text-green-600">{activeStores.length}</div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Total Applications</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Applications</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{applications.length}</div>
@@ -295,6 +410,7 @@ const AdminApplications = () => {
           </Card>
         </div>
 
+        {/* Pending Applications */}
         {pendingApplications.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-4">Pending Applications</h2>
@@ -316,11 +432,14 @@ const AdminApplications = () => {
                           <CardDescription className="mt-2">
                             {app.description}
                           </CardDescription>
-                          {app.whatsapp_number && (
-                            <p className="text-sm text-muted-foreground mt-2">
-                              WhatsApp: {app.whatsapp_number}
-                            </p>
-                          )}
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {app.community_type && (
+                              <Badge variant="outline">{app.community_type}</Badge>
+                            )}
+                            {app.community_size && (
+                              <Badge variant="secondary">{app.community_size}</Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <Badge variant="secondary">
@@ -354,63 +473,75 @@ const AdminApplications = () => {
           </div>
         )}
 
+        {/* Active Stores Table */}
         {activeStores.length > 0 && (
           <div>
             <h2 className="text-2xl font-bold mb-4">Active Stores</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {activeStores.map(app => (
-                <Card key={app.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={async () => {
-                  setViewingApp(app);
-                  setIsViewDialogOpen(true);
-                  
-                  // Fetch user profile
-                  const { data: profile } = await supabase
-                    .from("profiles")
-                    .select("*")
-                    .eq("id", app.created_by)
-                    .single();
-                  setViewingUser(profile);
-                  
-                  // Fetch click count
-                  const { count } = await supabase
-                    .from("click_tracking")
-                    .select("*", { count: "exact", head: true })
-                    .eq("project_id", app.id);
-                  setClickCount(count || 0);
-                }}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        {app.logo_url && (
-                          <img 
-                            src={app.logo_url} 
-                            alt={app.name} 
-                            className="h-12 w-12 object-contain"
-                          />
-                        )}
-                        <div>
-                          <CardTitle className="text-lg">{app.name}</CardTitle>
-                          <code className="text-xs text-muted-foreground">{app.tracking_code}</code>
-                          {app.slug && (
-                            <p className="text-xs text-primary mt-1">/project/{app.slug}/deals</p>
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Store</TableHead>
+                    <TableHead>Tracking Code</TableHead>
+                    <TableHead>Slug</TableHead>
+                    <TableHead>Community</TableHead>
+                    <TableHead>Earnings</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activeStores.map(app => (
+                    <TableRow key={app.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleViewStore(app)}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          {app.logo_url ? (
+                            <img 
+                              src={app.logo_url} 
+                              alt={app.name} 
+                              className="h-10 w-10 object-contain rounded border"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded border bg-muted flex items-center justify-center">
+                              <Store className="h-5 w-5 text-muted-foreground" />
+                            </div>
                           )}
+                          <div>
+                            <p className="font-medium">{app.name}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="default">
-                          <CheckCircle className="mr-1 h-3 w-3" />
-                          Active
-                        </Badge>
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+                      </TableCell>
+                      <TableCell>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">{app.tracking_code}</code>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">{app.slug || "-"}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{app.community_type || "-"}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-medium">${(app.total_earnings || 0).toFixed(2)}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {format(new Date(app.created_at), "MMM d, yyyy")}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleViewStore(app); }}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
           </div>
         )}
 
+        {/* Add Amazon Code Dialog */}
         <Dialog open={isCodeDialogOpen} onOpenChange={setIsCodeDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -456,99 +587,241 @@ const AdminApplications = () => {
           </DialogContent>
         </Dialog>
 
-        {/* View Store Details Dialog */}
-        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-          <DialogContent className="max-w-2xl">
+        {/* View/Edit Store Details Dialog */}
+        <Dialog open={isViewDialogOpen} onOpenChange={(open) => { setIsViewDialogOpen(open); if (!open) setIsEditing(false); }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                {viewingApp?.logo_url && (
-                  <img src={viewingApp.logo_url} alt={viewingApp.name} className="h-10 w-10 object-contain rounded" />
+              <div className="flex items-center justify-between">
+                <DialogTitle className="flex items-center gap-3">
+                  {viewingApp?.logo_url && (
+                    <img src={viewingApp.logo_url} alt={viewingApp.name} className="h-10 w-10 object-contain rounded" />
+                  )}
+                  {isEditing ? "Edit Store" : viewingApp?.name}
+                </DialogTitle>
+                {!isEditing && (
+                  <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
                 )}
-                {viewingApp?.name}
-              </DialogTitle>
+              </div>
               <DialogDescription>
-                Store and user details
+                {isEditing ? "Make changes to store details" : "Store and user details"}
               </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-6 py-4">
-              {/* User Info */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  User Information
-                </h4>
-                <div className="rounded-lg bg-muted p-4 space-y-2">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Email:</span>
-                      <p className="font-medium">{viewingUser?.email || "Loading..."}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">User ID:</span>
-                      <p className="font-mono text-xs">{viewingApp?.created_by}</p>
-                    </div>
-                  </div>
+              {/* Stats Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <MousePointer className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-lg font-bold">{clickCount}</p>
+                  <p className="text-xs text-muted-foreground">Clicks</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-lg font-bold">{shareCount}</p>
+                  <p className="text-xs text-muted-foreground">Shares</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <DollarSign className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-lg font-bold">${(viewingApp?.total_earnings || 0).toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">Earnings</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <Calendar className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-lg font-bold">
+                    {viewingApp ? format(new Date(viewingApp.created_at), "MMM d") : "-"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Created</p>
                 </div>
               </div>
 
-              {/* Store Info */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold">Store Information</h4>
-                <div className="rounded-lg bg-muted p-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Tracking Code:</span>
-                      <p className="font-mono font-medium">{viewingApp?.tracking_code}</p>
+              {isEditing ? (
+                /* Edit Form */
+                <div className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Store Name</Label>
+                      <Input
+                        id="edit-name"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      />
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Total Clicks:</span>
-                      <p className="font-bold text-lg">{clickCount}</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-slug">Slug</Label>
+                      <Input
+                        id="edit-slug"
+                        value={editForm.slug}
+                        onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
+                      />
                     </div>
-                    {viewingApp?.whatsapp_number && (
-                      <div>
-                        <span className="text-muted-foreground">WhatsApp:</span>
-                        <p className="font-medium">{viewingApp.whatsapp_number}</p>
-                      </div>
-                    )}
-                    {viewingApp?.website && (
-                      <div>
-                        <span className="text-muted-foreground">Website:</span>
-                        <p className="font-medium">{viewingApp.website}</p>
-                      </div>
-                    )}
-                    {viewingApp?.community_type && (
-                      <div>
-                        <span className="text-muted-foreground">Community Type:</span>
-                        <p className="font-medium">{viewingApp.community_type}</p>
-                      </div>
-                    )}
-                    {viewingApp?.community_size && (
-                      <div>
-                        <span className="text-muted-foreground">Community Size:</span>
-                        <p className="font-medium">{viewingApp.community_size}</p>
-                      </div>
-                    )}
                   </div>
-                  {viewingApp?.description && (
-                    <div className="pt-2 border-t">
-                      <span className="text-muted-foreground text-sm">Description:</span>
-                      <p className="text-sm mt-1">{viewingApp.description}</p>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-tracking">Amazon Tracking Code</Label>
+                    <Input
+                      id="edit-tracking"
+                      value={editForm.tracking_code}
+                      onChange={(e) => setEditForm({ ...editForm, tracking_code: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-description">Description</Label>
+                    <Textarea
+                      id="edit-description"
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-website">Website</Label>
+                      <Input
+                        id="edit-website"
+                        value={editForm.website}
+                        onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-community-type">Community Type</Label>
+                      <Input
+                        id="edit-community-type"
+                        value={editForm.community_type}
+                        onChange={(e) => setEditForm({ ...editForm, community_type: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-community-size">Community Size</Label>
+                    <Input
+                      id="edit-community-size"
+                      value={editForm.community_size}
+                      onChange={(e) => setEditForm({ ...editForm, community_size: e.target.value })}
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* View Mode */
+                <>
+                  {/* User Info */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Owner Information
+                    </h4>
+                    <div className="rounded-lg bg-muted p-4">
+                      <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Email:</span>
+                          <p className="font-medium">{viewingUser?.email || "Loading..."}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">User ID:</span>
+                          <p className="font-mono text-xs truncate">{viewingApp?.created_by}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Store Info */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold flex items-center gap-2">
+                      <Store className="h-4 w-4" />
+                      Store Details
+                    </h4>
+                    <div className="rounded-lg bg-muted p-4 space-y-3">
+                      <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Tracking Code:</span>
+                          <p className="font-mono font-medium">{viewingApp?.tracking_code}</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Slug:</span>
+                          <p className="font-medium">{viewingApp?.slug || "-"}</p>
+                        </div>
+                        {viewingApp?.website && (
+                          <div>
+                            <span className="text-muted-foreground">Website:</span>
+                            <p className="font-medium truncate">{viewingApp.website}</p>
+                          </div>
+                        )}
+                        {viewingApp?.community_type && (
+                          <div>
+                            <span className="text-muted-foreground">Community Type:</span>
+                            <p className="font-medium">{viewingApp.community_type}</p>
+                          </div>
+                        )}
+                        {viewingApp?.community_size && (
+                          <div>
+                            <span className="text-muted-foreground">Community Size:</span>
+                            <p className="font-medium">{viewingApp.community_size}</p>
+                          </div>
+                        )}
+                      </div>
+                      {viewingApp?.description && (
+                        <div className="pt-2 border-t">
+                          <span className="text-muted-foreground text-sm">Description:</span>
+                          <p className="text-sm mt-1">{viewingApp.description}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Address Info */}
+                  {(viewingApp?.address_line1 || viewingApp?.city) && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        Payment Address
+                      </h4>
+                      <div className="rounded-lg bg-muted p-4 text-sm">
+                        {viewingApp.address_line1 && <p>{viewingApp.address_line1}</p>}
+                        <p>
+                          {[viewingApp.city, viewingApp.state, viewingApp.postal_code]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+                      </div>
                     </div>
                   )}
-                </div>
-              </div>
+                </>
+              )}
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-                Close
-              </Button>
-              {viewingApp?.slug && (
-                <Button onClick={() => window.open(`/project/${viewingApp.slug}/deals`, '_blank')}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View Store
-                </Button>
+            <DialogFooter className="gap-2">
+              {isEditing ? (
+                <>
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveChanges} disabled={saving}>
+                    {saving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Changes
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                    Close
+                  </Button>
+                  {viewingApp?.slug && (
+                    <Button onClick={() => window.open(`/project/${viewingApp.slug}/deals`, '_blank')}>
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      View Store
+                    </Button>
+                  )}
+                </>
               )}
             </DialogFooter>
           </DialogContent>
