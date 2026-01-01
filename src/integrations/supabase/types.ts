@@ -266,8 +266,12 @@ export type Database = {
       }
       projects: {
         Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
           community_size: string | null
           community_type: string | null
+          country: string | null
           created_at: string | null
           created_by: string
           description: string | null
@@ -275,15 +279,24 @@ export type Database = {
           is_active: boolean | null
           logo_url: string | null
           name: string
+          paid_earnings: number | null
+          pending_earnings: number | null
+          postal_code: string | null
           slug: string | null
+          state: string | null
+          total_earnings: number | null
           tracking_code: string
           updated_at: string | null
           website: string | null
           whatsapp_number: string | null
         }
         Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
           community_size?: string | null
           community_type?: string | null
+          country?: string | null
           created_at?: string | null
           created_by: string
           description?: string | null
@@ -291,15 +304,24 @@ export type Database = {
           is_active?: boolean | null
           logo_url?: string | null
           name: string
+          paid_earnings?: number | null
+          pending_earnings?: number | null
+          postal_code?: string | null
           slug?: string | null
+          state?: string | null
+          total_earnings?: number | null
           tracking_code: string
           updated_at?: string | null
           website?: string | null
           whatsapp_number?: string | null
         }
         Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
           community_size?: string | null
           community_type?: string | null
+          country?: string | null
           created_at?: string | null
           created_by?: string
           description?: string | null
@@ -307,7 +329,12 @@ export type Database = {
           is_active?: boolean | null
           logo_url?: string | null
           name?: string
+          paid_earnings?: number | null
+          pending_earnings?: number | null
+          postal_code?: string | null
           slug?: string | null
+          state?: string | null
+          total_earnings?: number | null
           tracking_code?: string
           updated_at?: string | null
           website?: string | null

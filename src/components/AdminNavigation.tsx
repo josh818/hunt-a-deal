@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Users, Store, LogOut, LayoutDashboard } from "lucide-react";
+import { Settings, Users, Store, LogOut, LayoutDashboard, DollarSign } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +64,12 @@ export const AdminNavigation = () => {
                   {pendingCount}
                 </Badge>
               ) : null}
+            </Link>
+          </Button>
+          <Button variant="ghost" asChild>
+            <Link to="/admin/earnings">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Earnings
             </Link>
           </Button>
           <Button variant="ghost" asChild>

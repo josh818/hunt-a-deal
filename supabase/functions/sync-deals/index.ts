@@ -276,8 +276,11 @@ Deno.serve(async (req) => {
 
     console.log(`Price history tracking complete`);
 
-    // Keep only the 25 most recent deals by fetched_at
-    // First, get all deal IDs ordered by fetched_at descending
+    // Keep deals for 4 days, with minimum of 50 most recent deals
+    // Delete deals older than 4 days, but always keep at least 50
+    const fourDaysAgo = new Date();
+    fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
+    
     const { data: allDeals, error: fetchError } = await supabase
       .from('deals')
       .select('id, fetched_at')
@@ -285,20 +288,33 @@ Deno.serve(async (req) => {
 
     if (fetchError) {
       console.error('Error fetching deals for cleanup:', fetchError);
-    } else if (allDeals && allDeals.length > 25) {
-      // Get IDs of deals beyond the first 25
-      const dealsToDelete = allDeals.slice(25).map(d => d.id);
+    } else if (allDeals && allDeals.length > 50) {
+      // Keep at least 50 deals, but also delete any older than 4 days beyond that
+      const dealsToKeep = allDeals.slice(0, 50);
+      const potentialDeletes = allDeals.slice(50);
       
-      const { error: deleteError } = await supabase
-        .from('deals')
-        .delete()
-        .in('id', dealsToDelete);
+      // From the remaining, delete those older than 4 days
+      const dealsToDelete = potentialDeletes.filter(d => {
+        const dealDate = new Date(d.fetched_at);
+        return dealDate < fourDaysAgo;
+      }).map(d => d.id);
+      
+      if (dealsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('deals')
+          .delete()
+          .in('id', dealsToDelete);
 
-      if (deleteError) {
-        console.error('Error deleting old deals:', deleteError);
+        if (deleteError) {
+          console.error('Error deleting old deals:', deleteError);
+        } else {
+          console.log(`Cleaned up ${dealsToDelete.length} old deals (>4 days), keeping ${allDeals.length - dealsToDelete.length} deals`);
+        }
       } else {
-        console.log(`Cleaned up ${dealsToDelete.length} old deals, keeping the 25 most recent`);
+        console.log(`No deals older than 4 days to clean up. Total deals: ${allDeals.length}`);
       }
+    } else {
+      console.log(`Keeping all ${allDeals?.length || 0} deals (under 50 minimum threshold)`);
     }
 
     return new Response(

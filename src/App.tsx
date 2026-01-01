@@ -25,6 +25,7 @@ import ApplicationPending from "./pages/ApplicationPending";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import AdminApplications from "./pages/AdminApplications";
+import AdminEarnings from "./pages/AdminEarnings";
 import ResetPassword from "./pages/ResetPassword";
 import EmailPreview from "./pages/EmailPreview";
 
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/admin/applications" element={<AdminApplications />} />
+            <Route path="/admin/earnings" element={<AdminEarnings />} />
             <Route path="/test12345/sociallinks" element={<Test12345SocialLinks />} />
             <Route path="/social-links-generator" element={<SocialLinksGenerator />} />
             <Route path="/admin" element={<Admin />} />

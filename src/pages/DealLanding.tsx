@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { Footer } from "@/components/Footer";
 import { PriceHistoryChart } from "@/components/PriceHistoryChart";
@@ -132,6 +133,13 @@ const DealLanding = () => {
   // Display URL for showing link (actual tracking applied server-side)
   const displayUrl = replaceTrackingCode(deal.productUrl, trackingCode);
 
+  // Generate OG image URL
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const ogImageUrl = `${supabaseUrl}/functions/v1/og-image?dealId=${deal.id}`;
+  const shareUrl = window.location.href;
+  const shareTitle = `${deal.title} - $${deal.price.toFixed(2)}${savings ? ` (${savings}% OFF)` : ''}`;
+  const shareDescription = deal.description || `Save ${savings}% on ${deal.title}. Limited time deal!`;
+
   const handleDealClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     
@@ -156,6 +164,28 @@ const DealLanding = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{deal.title} | Relay Station Deal</title>
+        <meta name="description" content={shareDescription} />
+        
+        {/* Open Graph */}
+        <meta property="og:type" content="product" />
+        <meta property="og:title" content={shareTitle} />
+        <meta property="og:description" content={shareDescription} />
+        <meta property="og:image" content={ogImageUrl} />
+        <meta property="og:url" content={shareUrl} />
+        <meta property="og:site_name" content="Relay Station" />
+        
+        {/* Product specific */}
+        <meta property="product:price:amount" content={deal.price.toFixed(2)} />
+        <meta property="product:price:currency" content="USD" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={shareTitle} />
+        <meta name="twitter:description" content={shareDescription} />
+        <meta name="twitter:image" content={ogImageUrl} />
+      </Helmet>
       <div className="container mx-auto px-4 py-8">
         <Button
           variant="ghost"
