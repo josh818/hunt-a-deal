@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.og-image]
 verify_jwt = false
+
+[functions.check-stale-deals]
+verify_jwt = false
+
+[functions.admin-add-deal]
+verify_jwt = true
