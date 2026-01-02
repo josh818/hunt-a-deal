@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Trash2, Eye, AlertCircle, Copy, CheckCircle, BarChart, RefreshCw, Users, ShoppingBag, Loader2 } from "lucide-react";
+import { AdminAddDealDialog } from "@/components/AdminAddDealDialog";
 import { CategoryRulesManager } from "@/components/CategoryRulesManager";
 import { ShareAnalytics } from "@/components/ShareAnalytics";
 import { ClickAnalytics } from "@/components/ClickAnalytics";
@@ -312,7 +313,9 @@ const Admin = () => {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <AdminAddDealDialog />
+            
             <Button
               variant="outline"
               onClick={handleSyncDeals}
