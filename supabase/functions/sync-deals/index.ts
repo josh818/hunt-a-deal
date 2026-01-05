@@ -203,13 +203,14 @@ Deno.serve(async (req) => {
         : null;
 
       // Parse posted timestamp (e.g., "Nov 11, 2025 04:57 PM")
-      const parsePostedAt = (timestamp?: string): string | null => {
-        if (!timestamp) return null;
+      // If the source doesn't provide a usable timestamp, fall back to "now" so sorting still reflects the latest sync.
+      const parsePostedAt = (timestamp?: string): string => {
+        if (!timestamp) return new Date().toISOString();
         try {
           const date = new Date(timestamp);
-          return isNaN(date.getTime()) ? null : date.toISOString();
+          return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
         } catch {
-          return null;
+          return new Date().toISOString();
         }
       };
 

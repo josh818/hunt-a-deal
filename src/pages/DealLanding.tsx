@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,26 +52,39 @@ interface Project {
 }
 
 const fetchProject = async (slug: string): Promise<Project | null> => {
+  // Use the secure RPC so the slug can be either slug or custom_slug.
   const { data, error } = await supabase
-    .from("projects")
-    .select("id, tracking_code, name")
-    .eq("slug", slug)
-    .eq("is_active", true)
+    .rpc('get_public_project_by_slug', { project_slug: slug })
     .maybeSingle();
 
   if (error) {
     console.error("Error fetching project:", error);
     return null;
   }
-  
-  return data;
+
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    tracking_code: data.tracking_code,
+    name: data.name,
+  };
 };
 
 const DealLanding = () => {
   const { id, slug } = useParams<{ id: string; slug?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Fetch project if slug is provided (server-side tracking code)
+  const getProjectBasePath = () => {
+    if (!slug) return null;
+    const parts = location.pathname.split('/').filter(Boolean);
+    // /project/:slug/deal/:id OR /p/:slug/deal/:id OR /s/:slug/deal/:id
+    if (parts.length >= 3 && parts[2] === 'deal') return `/${parts[0]}/${parts[1]}`;
+    // /:slug/deal/:id
+    if (parts.length >= 2 && parts[1] === 'deal') return `/${parts[0]}`;
+    return `/${slug}`;
+  };
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ["project-for-deal", slug],
     queryFn: () => fetchProject(slug!),
@@ -117,7 +130,7 @@ const DealLanding = () => {
           <p className="text-muted-foreground mb-6">
             The deal you're looking for doesn't exist or has been removed.
           </p>
-          <Button onClick={() => navigate(slug ? `/project/${slug}/deals` : "/deals")}>
+          <Button onClick={() => navigate(getProjectBasePath() ? `${getProjectBasePath()}/deals` : "/deals")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Deals
           </Button>
@@ -156,7 +169,7 @@ const DealLanding = () => {
 
   const handleBackClick = () => {
     if (slug) {
-      navigate(`/project/${slug}/deals`);
+      navigate(`/${slug}/deals`);
     } else {
       navigate("/deals");
     }

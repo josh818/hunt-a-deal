@@ -51,12 +51,12 @@ const ProjectDeals = () => {
         return;
       }
       
-      // Check if this user owns a project with this slug
+      // Check if this user owns a project with this slug (slug OR custom_slug)
       const { data } = await supabase
         .from('projects')
         .select('id')
         .eq('created_by', user.id)
-        .eq('slug', slug)
+        .or(`slug.eq.${slug},custom_slug.eq.${slug}`)
         .maybeSingle();
       
       setIsOwner(!!data);
@@ -89,7 +89,7 @@ const ProjectDeals = () => {
           }
           throw error;
         }
-        return data ? { id: data.id, name: data.name, is_active: data.is_active } : null;
+        return data ? { id: data.id, name: data.name, is_active: data.is_active, slug: data.custom_slug || data.slug, url_prefix: data.url_prefix } : null;
       } catch (err) {
         console.error("Project check failed:", err);
         throw err;
@@ -138,6 +138,7 @@ const ProjectDeals = () => {
         const { data, error } = await supabase
           .from('deals')
           .select('*')
+          .order('posted_at', { ascending: false, nullsFirst: false })
           .order('fetched_at', { ascending: false });
 
         if (error) {
@@ -206,7 +207,11 @@ const ProjectDeals = () => {
 
   // Share functionality
   const getShareUrl = () => {
-    return `https://hunt-a-deal.lovable.app/project/${slug}/deals`;
+    const effectiveSlug = (project as any)?.custom_slug || (project as any)?.slug || slug;
+    const prefix = (project as any)?.url_prefix;
+
+    const base = prefix && prefix !== '' ? `/${prefix}/${effectiveSlug}` : `/${effectiveSlug}`;
+    return `${window.location.origin}${base}/deals`;
   };
 
   const getShareText = () => {
