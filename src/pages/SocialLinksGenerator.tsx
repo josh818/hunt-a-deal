@@ -16,6 +16,7 @@ const fetchDeals = async (): Promise<Deal[]> => {
   const { data, error } = await supabase
     .from('deals')
     .select('*')
+    .order('posted_at', { ascending: false, nullsFirst: false })
     .order('fetched_at', { ascending: false })
     .limit(20);
 

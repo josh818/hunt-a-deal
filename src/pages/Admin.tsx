@@ -12,6 +12,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Trash2, Eye, AlertCircle, Copy, CheckCircle, BarChart, RefreshCw, Users, ShoppingBag, Loader2 } from "lucide-react";
 import { AdminAddDealDialog } from "@/components/AdminAddDealDialog";
@@ -62,6 +69,8 @@ interface Project {
   id: string;
   name: string;
   slug: string;
+  custom_slug?: string | null;
+  url_prefix?: string | null;
   tracking_code: string;
   description: string | null;
   logo_url: string | null;
@@ -77,6 +86,7 @@ const Admin = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [syncingDeals, setSyncingDeals] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [urlSettings, setUrlSettings] = useState<Record<string, { custom_slug: string; url_prefix: string; saving: boolean }>>({});
   const [newProject, setNewProject] = useState({
     name: "",
     slug: "",
@@ -116,7 +126,7 @@ const Admin = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('id, name, slug, tracking_code, description, logo_url, created_at, created_by, updated_at, is_active')
+        .select('id, name, slug, custom_slug, url_prefix, tracking_code, description, logo_url, created_at, created_by, updated_at, is_active')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -124,6 +134,75 @@ const Admin = () => {
     },
     enabled: isAdmin === true,
   });
+
+  // Initialize per-project URL settings UI state
+  useEffect(() => {
+    if (!projects) return;
+    setUrlSettings((prev) => {
+      // Preserve any in-progress edits
+      const next = { ...prev };
+      for (const p of projects) {
+        if (!next[p.id]) {
+          next[p.id] = {
+            custom_slug: (p.custom_slug || "").trim(),
+            url_prefix: (p.url_prefix ?? "project").trim(),
+            saving: false,
+          };
+        }
+      }
+      return next;
+    });
+  }, [projects]);
+
+  const buildProjectBasePath = (p: Project) => {
+    const effectiveSlug = (p.custom_slug && p.custom_slug.trim().length > 0) ? p.custom_slug.trim() : p.slug;
+    const prefix = (p.url_prefix ?? 'project').trim();
+
+    if (prefix === '') return `/${effectiveSlug}`;
+    return `/${prefix}/${effectiveSlug}`;
+  };
+
+  const saveUrlSettings = async (p: Project) => {
+    const current = urlSettings[p.id];
+    if (!current || current.saving) return;
+
+    const nextSlug = current.custom_slug.trim();
+    if (nextSlug) {
+      const validation = validateSlug(nextSlug);
+      if (!validation.valid) {
+        toast.error(validation.error || "Invalid custom slug");
+        return;
+      }
+    }
+
+    setUrlSettings((prev) => ({
+      ...prev,
+      [p.id]: { ...prev[p.id], saving: true },
+    }));
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          custom_slug: nextSlug || null,
+          url_prefix: current.url_prefix,
+        })
+        .eq('id', p.id);
+
+      if (error) throw error;
+
+      toast.success("URL settings saved");
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Failed to save URL settings");
+    } finally {
+      setUrlSettings((prev) => ({
+        ...prev,
+        [p.id]: { ...prev[p.id], saving: false },
+      }));
+    }
+  };
 
   // Fetch analytics
   const { data: analytics } = useQuery({
@@ -507,6 +586,7 @@ const Admin = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Tracking Code</TableHead>
+                    <TableHead>URL Settings</TableHead>
                     <TableHead>Analytics</TableHead>
                     <TableHead>Links</TableHead>
                     <TableHead>Actions</TableHead>
@@ -515,8 +595,9 @@ const Admin = () => {
                 <TableBody>
                   {projects.map((project) => {
                     const stats = getProjectAnalytics(project.id);
-                    const dealsUrl = `${window.location.origin}/project/${project.slug}/deals`;
-                    const socialUrl = `${window.location.origin}/project/${project.slug}/social`;
+                    const basePath = `${window.location.origin}${buildProjectBasePath(project)}`;
+                    const dealsUrl = `${basePath}/deals`;
+                    const socialUrl = `${basePath}/social`;
 
                     return (
                       <TableRow key={project.id}>
@@ -532,6 +613,75 @@ const Admin = () => {
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">{project.tracking_code}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-2">
+                            <div className="flex flex-col gap-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <Select
+                                  value={urlSettings[project.id]?.url_prefix ?? (project.url_prefix ?? 'project')}
+                                  onValueChange={(v) =>
+                                    setUrlSettings((prev) => ({
+                                      ...prev,
+                                      [project.id]: {
+                                        custom_slug: prev[project.id]?.custom_slug ?? (project.custom_slug || ""),
+                                        url_prefix: v,
+                                        saving: prev[project.id]?.saving ?? false,
+                                      },
+                                    }))
+                                  }
+                                >
+                                  <SelectTrigger className="h-9">
+                                    <SelectValue placeholder="Prefix" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="project">/project</SelectItem>
+                                    <SelectItem value="p">/p</SelectItem>
+                                    <SelectItem value="s">/s</SelectItem>
+                                    <SelectItem value="">(root)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  value={urlSettings[project.id]?.custom_slug ?? (project.custom_slug || "")}
+                                  onChange={(e) => {
+                                    const sanitized = e.target.value
+                                      .toLowerCase()
+                                      .replace(/[^a-z0-9-]/g, '-')
+                                      .replace(/--+/g, '-')
+                                      .replace(/^-|-$/g, '');
+                                    setUrlSettings((prev) => ({
+                                      ...prev,
+                                      [project.id]: {
+                                        custom_slug: sanitized,
+                                        url_prefix: prev[project.id]?.url_prefix ?? (project.url_prefix ?? 'project'),
+                                        saving: prev[project.id]?.saving ?? false,
+                                      },
+                                    }));
+                                  }}
+                                  placeholder="custom-slug (optional)"
+                                  className="h-9"
+                                />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => saveUrlSettings(project)}
+                                  disabled={urlSettings[project.id]?.saving}
+                                  className="h-9"
+                                >
+                                  {urlSettings[project.id]?.saving ? "Saving..." : "Save"}
+                                </Button>
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {buildProjectBasePath({
+                                    ...project,
+                                    custom_slug: urlSettings[project.id]?.custom_slug || project.custom_slug,
+                                    url_prefix: urlSettings[project.id]?.url_prefix ?? project.url_prefix,
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2 text-sm">
@@ -574,7 +724,11 @@ const Admin = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => navigate(`/project/${project.slug}/deals`)}
+                              onClick={() => navigate(`${buildProjectBasePath({
+                                ...project,
+                                custom_slug: urlSettings[project.id]?.custom_slug || project.custom_slug,
+                                url_prefix: urlSettings[project.id]?.url_prefix ?? project.url_prefix,
+                              })}/deals`)}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>

@@ -17,9 +17,11 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 const fetchDeals = async (): Promise<Deal[]> => {
   // Fetch deals from our database cache
+  // "Newest" should reflect when the deal was posted in the feed (posted_at), not when we last synced.
   const { data, error } = await supabase
     .from('deals')
     .select('*')
+    .order('posted_at', { ascending: false, nullsFirst: false })
     .order('fetched_at', { ascending: false });
 
   if (error) {
