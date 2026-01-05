@@ -66,7 +66,12 @@ export const AdminDealsManager = () => {
         .limit(50);
 
       if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`);
+        // Escape SQL wildcards and remove quotes to prevent injection
+        const sanitized = searchQuery
+          .replace(/[%_]/g, '\\$&')
+          .replace(/['"]/g, '');
+        
+        query = query.or(`title.ilike.%${sanitized}%,brand.ilike.%${sanitized}%,category.ilike.%${sanitized}%`);
       }
 
       const { data, error } = await query;

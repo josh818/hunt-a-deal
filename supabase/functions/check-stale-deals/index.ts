@@ -104,7 +104,8 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`Sending alert to ${adminEmails.length} admin(s): ${adminEmails.join(", ")}`);
+    console.log(`Sending alert to ${adminEmails.length} admin(s)`);
+    console.log(`Admin user IDs: ${adminUserIds.join(", ")}`);
 
     // Send alert email
     const emailResponse = await resend.emails.send({

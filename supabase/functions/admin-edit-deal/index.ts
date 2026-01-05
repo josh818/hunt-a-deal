@@ -6,6 +6,47 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Comprehensive input validation for deal data
+function validateDealData(dealData: any): { valid: boolean; error?: string } {
+  if (!dealData.title || dealData.title.trim().length === 0) {
+    return { valid: false, error: "Title is required" };
+  }
+  if (dealData.title.length > 500) {
+    return { valid: false, error: "Title too long (max 500 characters)" };
+  }
+  if (!dealData.price || isNaN(dealData.price) || dealData.price < 0) {
+    return { valid: false, error: "Valid price is required (must be >= 0)" };
+  }
+  if (!dealData.product_url || !dealData.product_url.startsWith('http')) {
+    return { valid: false, error: "Valid product URL is required" };
+  }
+  try {
+    new URL(dealData.product_url);
+  } catch {
+    return { valid: false, error: "Invalid product URL format" };
+  }
+  if (dealData.image_url && dealData.image_url !== "https://via.placeholder.com/300x300?text=No+Image") {
+    try {
+      const imgUrl = new URL(dealData.image_url);
+      if (imgUrl.protocol !== 'http:' && imgUrl.protocol !== 'https:') {
+        return { valid: false, error: "Image URL must use HTTP or HTTPS" };
+      }
+    } catch {
+      return { valid: false, error: "Invalid image URL format" };
+    }
+  }
+  if (dealData.original_price && (isNaN(dealData.original_price) || dealData.original_price < 0)) {
+    return { valid: false, error: "Original price must be a positive number" };
+  }
+  if (dealData.discount && (isNaN(dealData.discount) || dealData.discount < 0 || dealData.discount > 100)) {
+    return { valid: false, error: "Discount must be between 0 and 100" };
+  }
+  if (dealData.description && dealData.description.length > 5000) {
+    return { valid: false, error: "Description too long (max 5000 characters)" };
+  }
+  return { valid: true };
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -58,11 +99,36 @@ serve(async (req: Request) => {
 
     // Parse request body
     const dealData = await req.json();
+
+    // Validate deal ID
+    if (!dealData.id || typeof dealData.id !== 'string' || dealData.id.trim().length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Valid deal ID is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log("Updating deal:", dealData.id);
 
-    if (!dealData.id) {
+    // Verify deal exists before updating
+    const { data: existingDeal, error: checkError } = await supabaseAdmin
+      .from("deals")
+      .select("id")
+      .eq("id", dealData.id)
+      .single();
+
+    if (checkError || !existingDeal) {
       return new Response(
-        JSON.stringify({ error: "Deal ID is required" }),
+        JSON.stringify({ error: "Deal not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate deal data
+    const validation = validateDealData(dealData);
+    if (!validation.valid) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

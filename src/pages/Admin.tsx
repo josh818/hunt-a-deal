@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Trash2, Eye, AlertCircle, Copy, CheckCircle, BarChart, RefreshCw, Users, ShoppingBag, Loader2 } from "lucide-react";
 import { AdminAddDealDialog } from "@/components/AdminAddDealDialog";
 import { AdminDealsManager } from "@/components/AdminDealsManager";
@@ -75,6 +76,7 @@ const Admin = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [syncingDeals, setSyncingDeals] = useState(false);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [newProject, setNewProject] = useState({
     name: "",
     slug: "",
@@ -252,11 +254,30 @@ const Admin = () => {
     },
   });
 
-  const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    toast.success("Copied to clipboard!");
-    setTimeout(() => setCopiedId(null), 2000);
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      toast.success("Copied to clipboard!");
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error('Clipboard error:', error);
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast.success("Copied to clipboard!");
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+      } catch (err) {
+        toast.error("Failed to copy to clipboard");
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   const getProjectAnalytics = (projectId: string) => {
@@ -560,7 +581,7 @@ const Admin = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => deleteProject.mutate(project.id)}
+                              onClick={() => setDeletingProjectId(project.id)}
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -584,6 +605,32 @@ const Admin = () => {
       </main>
       
       <Footer />
+
+      {/* Delete Project Confirmation */}
+      <AlertDialog open={!!deletingProjectId} onOpenChange={(open) => !open && setDeletingProjectId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this project? This will remove the project and all its analytics data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deletingProjectId) {
+                  deleteProject.mutate(deletingProjectId);
+                  setDeletingProjectId(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteProject.isPending ? "Deleting..." : "Delete Project"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
