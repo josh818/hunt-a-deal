@@ -260,20 +260,33 @@ Deno.serve(async (req) => {
       };
     }).filter(deal => deal !== null);
 
+    // Deduplicate deals by ID (keep first occurrence) to prevent upsert conflicts
+    const seenIds = new Set<string>();
+    const uniqueDeals = transformedDeals.filter((deal: any) => {
+      if (seenIds.has(deal.id)) {
+        console.log(`Skipping duplicate deal ID: ${deal.id}`);
+        return false;
+      }
+      seenIds.add(deal.id);
+      return true;
+    });
+
+    console.log(`Deduped from ${transformedDeals.length} to ${uniqueDeals.length} unique deals`);
+
     // Upsert deals into database first
     const { data, error } = await supabase
       .from('deals')
-      .upsert(transformedDeals, { onConflict: 'id' });
+      .upsert(uniqueDeals, { onConflict: 'id' });
 
     if (error) {
       console.error('Error upserting deals:', error);
       throw error;
     }
 
-    console.log(`Successfully synced ${transformedDeals.length} deals to database`);
+    console.log(`Successfully synced ${uniqueDeals.length} deals to database`);
 
     // Track price changes for price history
-    for (const deal of transformedDeals) {
+    for (const deal of uniqueDeals) {
       // Get existing deal to check if price changed
       const { data: existingDeal } = await supabase
         .from('deals')
@@ -348,8 +361,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Successfully synced ${transformedDeals.length} deals`,
-        count: transformedDeals.length,
+        message: `Successfully synced ${uniqueDeals.length} deals`,
+        count: uniqueDeals.length,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
