@@ -65,8 +65,7 @@ export const Navigation = () => {
   const navItems = [
     { path: "/", label: "Home", icon: Home },
     { path: "/deals", label: "All Deals", icon: Tag },
-    { path: "/test12345/sociallinks", label: "Social Deals", icon: Share2 },
-    { path: "/social-links-generator", label: "AI Generator", icon: Sparkles },
+    { path: "/socials", label: "Socials", icon: Share2 },
     { path: "/projects", label: "Projects", icon: Folder },
     { path: "/profile", label: "Account", icon: User },
   ];

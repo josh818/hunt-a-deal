@@ -274,6 +274,7 @@ export type Database = {
           country: string | null
           created_at: string | null
           created_by: string
+          custom_slug: string | null
           description: string | null
           id: string
           is_active: boolean | null
@@ -287,6 +288,7 @@ export type Database = {
           total_earnings: number | null
           tracking_code: string
           updated_at: string | null
+          url_prefix: string | null
           website: string | null
           whatsapp_number: string | null
         }
@@ -299,6 +301,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           created_by: string
+          custom_slug?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -312,6 +315,7 @@ export type Database = {
           total_earnings?: number | null
           tracking_code: string
           updated_at?: string | null
+          url_prefix?: string | null
           website?: string | null
           whatsapp_number?: string | null
         }
@@ -324,6 +328,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           created_by?: string
+          custom_slug?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
@@ -337,6 +342,7 @@ export type Database = {
           total_earnings?: number | null
           tracking_code?: string
           updated_at?: string | null
+          url_prefix?: string | null
           website?: string | null
           whatsapp_number?: string | null
         }
@@ -426,6 +432,7 @@ export type Database = {
         Args: { project_slug: string }
         Returns: {
           created_at: string
+          custom_slug: string
           description: string
           id: string
           is_active: boolean
@@ -433,6 +440,7 @@ export type Database = {
           name: string
           slug: string
           tracking_code: string
+          url_prefix: string
           whatsapp_number: string
         }[]
       }

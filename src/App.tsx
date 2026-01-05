@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Test12345SocialLinks from "./pages/Test12345SocialLinks";
 import SocialLinksGenerator from "./pages/SocialLinksGenerator";
+import Socials from "./pages/Socials";
 import Admin from "./pages/Admin";
 import CronJobs from "./pages/CronJobs";
 import CronAnalytics from "./pages/CronAnalytics";
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/admin/earnings" element={<AdminEarnings />} />
             <Route path="/test12345/sociallinks" element={<Test12345SocialLinks />} />
             <Route path="/social-links-generator" element={<SocialLinksGenerator />} />
+            <Route path="/socials" element={<Socials />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/cron-jobs" element={<CronJobs />} />
             <Route path="/admin/cron-analytics" element={<CronAnalytics />} />
