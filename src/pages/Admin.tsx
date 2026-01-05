@@ -173,6 +173,17 @@ const Admin = () => {
         toast.error(validation.error || "Invalid custom slug");
         return;
       }
+
+      // Check uniqueness: custom_slug must not conflict with another project's slug or custom_slug
+      const conflictingProjects = projects?.filter(
+        (other) =>
+          other.id !== p.id &&
+          (other.slug === nextSlug || other.custom_slug === nextSlug)
+      );
+      if (conflictingProjects && conflictingProjects.length > 0) {
+        toast.error("This slug is already in use by another project");
+        return;
+      }
     }
 
     setUrlSettings((prev) => ({

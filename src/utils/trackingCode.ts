@@ -3,9 +3,27 @@
 const TRACKING_CODE = "joshrelay-20";
 
 /**
+ * Checks if a string is a valid absolute URL
+ */
+function isAbsoluteUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Replaces or adds Amazon affiliate tracking code to a URL
+ * Safely handles relative URLs by returning them unchanged
  */
 export function replaceTrackingCode(url: string, trackingCode: string = TRACKING_CODE): string {
+  // Return relative URLs unchanged - they're not Amazon links
+  if (!url || !isAbsoluteUrl(url)) {
+    return url;
+  }
+
   try {
     const urlObj = new URL(url);
     
@@ -19,7 +37,7 @@ export function replaceTrackingCode(url: string, trackingCode: string = TRACKING
     
     return urlObj.toString();
   } catch (error) {
-    console.error('Error replacing tracking code:', error);
+    // Silently return original URL for any parsing errors
     return url;
   }
 }

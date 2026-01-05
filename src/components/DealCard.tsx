@@ -120,6 +120,25 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
     window.open(serverVerifiedUrl || displayUrl, '_blank', 'noopener,noreferrer');
   };
 
+  // Generate proxied image URL for deals with placeholder images
+  const getImageSrc = (): string => {
+    // If the image_url is already a valid URL, use it directly
+    if (deal.imageUrl && deal.imageUrl.startsWith('http')) {
+      return deal.imageUrl;
+    }
+    
+    // If we have a valid product URL and the image is a placeholder, try the image proxy
+    if (deal.productUrl && deal.productUrl.startsWith('http')) {
+      const proxyUrl = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/image-proxy`);
+      proxyUrl.searchParams.set('url', deal.productUrl);
+      proxyUrl.searchParams.set('title', deal.title);
+      return proxyUrl.toString();
+    }
+    
+    // Fallback to placeholder
+    return '/placeholder.svg';
+  };
+
   return (
     <Card className="group overflow-hidden transition-all hover:shadow-lg flex flex-col h-full text-sm sm:text-base">
       <div className="relative aspect-square overflow-hidden bg-muted">
@@ -136,7 +155,7 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
           </div>
         ) : (
           <img 
-            src={deal.imageUrl} 
+            src={getImageSrc()} 
             alt={deal.title}
             loading="lazy"
             className={`h-full w-full object-cover transition-all duration-300 group-hover:scale-105 ${
