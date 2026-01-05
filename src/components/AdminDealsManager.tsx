@@ -36,6 +36,25 @@ export const AdminDealsManager = () => {
   const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Deal>>({});
 
+  // Safe URL opener to prevent XSS attacks
+  const openProductUrl = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+        toast.error("Invalid URL protocol. Only HTTP/HTTPS links are allowed.");
+        return;
+      }
+      if (url.toLowerCase().startsWith('javascript:') || url.toLowerCase().startsWith('data:')) {
+        toast.error("Invalid URL format.");
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      toast.error("Invalid URL format.");
+      console.error('Invalid URL:', error);
+    }
+  };
+
   // Fetch deals with search
   const { data: deals, isLoading } = useQuery({
     queryKey: ['adminDeals', searchQuery],
@@ -224,7 +243,7 @@ export const AdminDealsManager = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => window.open(deal.product_url, '_blank')}
+                          onClick={() => openProductUrl(deal.product_url)}
                           title="View on Amazon"
                         >
                           <ExternalLink className="h-4 w-4" />

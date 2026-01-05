@@ -22,12 +22,34 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
+// Reserved slugs that cannot be used for projects
+const RESERVED_SLUGS = ['admin', 'api', 'login', 'auth', 'settings', 'dashboard', 'profile', 'project', 'deals', 'social', 'about', 'contact', 'terms', 'privacy'];
+
+// Validate slug for security and reserved words
+const validateSlug = (slug: string): { valid: boolean; error?: string } => {
+  if (RESERVED_SLUGS.includes(slug)) {
+    return { valid: false, error: "This slug is reserved by the system" };
+  }
+  if (slug.includes('..') || slug.includes('/') || slug.includes('\\')) {
+    return { valid: false, error: "Slug cannot contain path traversal characters" };
+  }
+  if (!/^[a-z0-9-]+$/.test(slug)) {
+    return { valid: false, error: "Slug must contain only lowercase letters, numbers, and hyphens" };
+  }
+  if (slug.length < 3 || slug.length > 50) {
+    return { valid: false, error: "Slug must be between 3 and 50 characters" };
+  }
+  return { valid: true };
+};
+
 const projectSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name too long"),
   slug: z.string()
-    .min(1, "Slug is required")
+    .min(3, "Slug must be at least 3 characters")
     .max(50, "Slug too long")
-    .regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
+    .regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens")
+    .refine((slug) => !RESERVED_SLUGS.includes(slug), "This slug is reserved by the system")
+    .refine((slug) => !slug.includes('..') && !slug.includes('/') && !slug.includes('\\'), "Slug cannot contain path traversal characters"),
   tracking_code: z.string()
     .min(1, "Tracking code is required")
     .max(50, "Tracking code too long")
@@ -373,14 +395,26 @@ const Admin = () => {
                     id="slug"
                     value={newProject.slug}
                     onChange={(e) => {
-                      setNewProject({ ...newProject, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') });
-                      setFormErrors({ ...formErrors, slug: "" });
+                      const sanitized = e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-]/g, '-')
+                        .replace(/--+/g, '-')
+                        .replace(/^-|-$/g, '');
+                      
+                      const validation = validateSlug(sanitized);
+                      setNewProject({ ...newProject, slug: sanitized });
+                      
+                      if (!validation.valid && sanitized) {
+                        setFormErrors({ ...formErrors, slug: validation.error || "" });
+                      } else {
+                        setFormErrors({ ...formErrors, slug: "" });
+                      }
                     }}
                     placeholder="my-project"
                     className={formErrors.slug ? "border-destructive" : ""}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Lowercase letters, numbers, and hyphens only (e.g., "my-project")
+                    Lowercase letters, numbers, and hyphens only (min 3 chars)
                   </p>
                   {formErrors.slug && (
                     <p className="text-xs text-destructive mt-1">{formErrors.slug}</p>
