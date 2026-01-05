@@ -116,6 +116,34 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Generate stable deal IDs based on product identifiers (not timestamps!)
+    function generateStableDealId(item: DealResponse, index: number): string {
+      // Try to extract Amazon product ID from URL
+      if (item.url) {
+        const amazonMatch = item.url.match(/\/dp\/([A-Z0-9]+)/i);
+        if (amazonMatch) return `amazon-${amazonMatch[1]}`;
+        
+        const gp = item.url.match(/\/gp\/product\/([A-Z0-9]+)/i);
+        if (gp) return `amazon-${gp[1]}`;
+      }
+      
+      // Try Slickdeals URL
+      if (item.slickdeals_url) {
+        const sdMatch = item.slickdeals_url.match(/\/f\/(\d+)/);
+        if (sdMatch) return `slickdeals-${sdMatch[1]}`;
+      }
+      
+      // Fallback: create stable hash from title + price
+      if (item.title) {
+        const normalized = item.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const priceStr = String(item.price || '').replace(/[^0-9]/g, '');
+        return `deal-${normalized.substring(0, 40)}-${priceStr}`.substring(0, 50);
+      }
+      
+      // Last resort
+      return `deal-fallback-${index}`;
+    }
+
     // Transform API response to match our database schema
     const transformedDeals = rawDeals.map((item: DealResponse, index: number) => {
       // Parse price strings (remove $ and convert to number)
@@ -213,7 +241,7 @@ Deno.serve(async (req) => {
       };
 
       return {
-        id: `deal-${Date.now()}-${index}`,
+        id: generateStableDealId(item, index),
         title: item.title || "Product",
         description: item.description || null,
         price: price,
