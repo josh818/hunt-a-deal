@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Eye, AlertCircle, Copy, CheckCircle, BarChart, RefreshCw, Users, ShoppingBag, Loader2 } from "lucide-react";
+import { Plus, Trash2, Eye, AlertCircle, Copy, CheckCircle, BarChart, RefreshCw, Users, ShoppingBag, Loader2, Image } from "lucide-react";
 import { AdminAddDealDialog } from "@/components/AdminAddDealDialog";
 import { AdminDealsManager } from "@/components/AdminDealsManager";
 import { CategoryRulesManager } from "@/components/CategoryRulesManager";
@@ -87,6 +87,7 @@ const Admin = () => {
   const [syncingDeals, setSyncingDeals] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [urlSettings, setUrlSettings] = useState<Record<string, { custom_slug: string; url_prefix: string; saving: boolean }>>({});
+  const [refreshingImages, setRefreshingImages] = useState(false);
   const [newProject, setNewProject] = useState({
     name: "",
     slug: "",
@@ -272,6 +273,70 @@ const Admin = () => {
       toast.error(error.message || 'Failed to sync deals');
     } finally {
       setSyncingDeals(false);
+    }
+  };
+
+  // Refresh images for deals with placeholders
+  const handleRefreshImages = async () => {
+    setRefreshingImages(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      // Find deals with placeholder images
+      const { data: deals, error: fetchError } = await supabase
+        .from('deals')
+        .select('id, title, product_url, image_url')
+        .or('image_url.is.null,image_url.eq.,image_url.ilike.%placeholder%');
+
+      if (fetchError) throw fetchError;
+
+      if (!deals || deals.length === 0) {
+        toast.info('No deals with placeholder images found');
+        setRefreshingImages(false);
+        return;
+      }
+
+      let updatedCount = 0;
+      const proxyBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/image-proxy`;
+
+      for (const deal of deals) {
+        if (!deal.product_url) continue;
+
+        try {
+          // Call image proxy to get a real image
+          const proxyUrl = new URL(proxyBaseUrl);
+          proxyUrl.searchParams.set('url', deal.product_url);
+          if (deal.title) proxyUrl.searchParams.set('title', deal.title);
+
+          const response = await fetch(proxyUrl.toString());
+          
+          if (response.ok) {
+            // Get the final URL after proxy processing (it may redirect or return data)
+            // For now, we store the proxy URL itself so it fetches dynamically
+            const { error: updateError } = await supabase
+              .from('deals')
+              .update({ image_url: proxyUrl.toString() })
+              .eq('id', deal.id);
+
+            if (!updateError) {
+              updatedCount++;
+            }
+          }
+        } catch (e) {
+          console.error(`Failed to refresh image for deal ${deal.id}:`, e);
+        }
+      }
+
+      toast.success(`Refreshed images for ${updatedCount} of ${deals.length} deals`);
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    } catch (error: any) {
+      console.error('Image refresh error:', error);
+      toast.error(error.message || 'Failed to refresh images');
+    } finally {
+      setRefreshingImages(false);
     }
   };
 
@@ -467,6 +532,20 @@ const Admin = () => {
                 <RefreshCw className="h-4 w-4" />
               )}
               {syncingDeals ? "Syncing..." : "Refresh Deals"}
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={handleRefreshImages}
+              disabled={refreshingImages}
+              className="gap-2"
+            >
+              {refreshingImages ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Image className="h-4 w-4" />
+              )}
+              {refreshingImages ? "Refreshing..." : "Refresh Images"}
             </Button>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
