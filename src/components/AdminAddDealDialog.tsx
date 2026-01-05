@@ -9,6 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import DOMPurify from "dompurify";
+
+// Sanitize input to prevent XSS attacks
+const sanitizeInput = (input: string): string => {
+  return DOMPurify.sanitize(input, { 
+    ALLOWED_TAGS: [],
+    ALLOWED_ATTR: [] 
+  }).trim();
+};
 
 const dealSchema = z.object({
   id: z.string().min(1, "ID is required").max(100, "ID too long"),
@@ -45,18 +54,33 @@ export function AdminAddDealDialog() {
       const price = parseFloat(formData.price);
       const original_price = formData.original_price ? parseFloat(formData.original_price) : undefined;
       
+      // Sanitize all text inputs to prevent XSS
       const dealData = {
-        id: formData.id.trim(),
-        title: formData.title.trim(),
+        id: sanitizeInput(formData.id),
+        title: sanitizeInput(formData.title),
         price,
         original_price,
         product_url: formData.product_url.trim(),
         image_url: formData.image_url.trim() || "https://via.placeholder.com/300x300?text=No+Image",
-        description: formData.description.trim() || null,
-        category: formData.category.trim() || null,
-        brand: formData.brand.trim() || null,
-        coupon_code: formData.coupon_code.trim() || null,
+        description: formData.description ? sanitizeInput(formData.description) : null,
+        category: formData.category ? sanitizeInput(formData.category) : null,
+        brand: formData.brand ? sanitizeInput(formData.brand) : null,
+        coupon_code: formData.coupon_code ? sanitizeInput(formData.coupon_code) : null,
       };
+
+      // Validate image URL protocol
+      if (dealData.image_url && dealData.image_url !== "https://via.placeholder.com/300x300?text=No+Image") {
+        try {
+          const imgUrl = new URL(dealData.image_url);
+          if (imgUrl.protocol !== 'http:' && imgUrl.protocol !== 'https:') {
+            setFormErrors({ ...formErrors, image_url: "Image URL must use HTTP or HTTPS" });
+            throw new Error("Validation failed");
+          }
+        } catch {
+          setFormErrors({ ...formErrors, image_url: "Invalid image URL format" });
+          throw new Error("Validation failed");
+        }
+      }
 
       // Validate with zod
       const validation = dealSchema.safeParse(dealData);

@@ -6,6 +6,47 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Comprehensive input validation for deal data
+function validateDealData(dealData: any): { valid: boolean; error?: string } {
+  if (!dealData.title || dealData.title.trim().length === 0) {
+    return { valid: false, error: "Title is required" };
+  }
+  if (dealData.title.length > 500) {
+    return { valid: false, error: "Title too long (max 500 characters)" };
+  }
+  if (!dealData.price || isNaN(dealData.price) || dealData.price < 0) {
+    return { valid: false, error: "Valid price is required (must be >= 0)" };
+  }
+  if (!dealData.product_url || !dealData.product_url.startsWith('http')) {
+    return { valid: false, error: "Valid product URL is required" };
+  }
+  try {
+    new URL(dealData.product_url);
+  } catch {
+    return { valid: false, error: "Invalid product URL format" };
+  }
+  if (dealData.image_url && dealData.image_url !== "https://via.placeholder.com/300x300?text=No+Image") {
+    try {
+      const imgUrl = new URL(dealData.image_url);
+      if (imgUrl.protocol !== 'http:' && imgUrl.protocol !== 'https:') {
+        return { valid: false, error: "Image URL must use HTTP or HTTPS" };
+      }
+    } catch {
+      return { valid: false, error: "Invalid image URL format" };
+    }
+  }
+  if (dealData.original_price && (isNaN(dealData.original_price) || dealData.original_price < 0)) {
+    return { valid: false, error: "Original price must be a positive number" };
+  }
+  if (dealData.discount && (isNaN(dealData.discount) || dealData.discount < 0 || dealData.discount > 100)) {
+    return { valid: false, error: "Discount must be between 0 and 100" };
+  }
+  if (dealData.description && dealData.description.length > 5000) {
+    return { valid: false, error: "Description too long (max 5000 characters)" };
+  }
+  return { valid: true };
+}
+
 serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -61,13 +102,25 @@ serve(async (req: Request) => {
 
     // Parse the deal data
     const dealData = await req.json();
-    console.log("Adding manual deal:", dealData.id, dealData.title);
+    
+    // Validate deal data
+    const validation = validateDealData(dealData);
+    if (!validation.valid) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate server-side ID to prevent ID injection attacks
+    const dealId = crypto.randomUUID();
+    console.log("Adding manual deal with generated ID:", dealId, dealData.title);
 
     // Insert the deal using service role (bypasses RLS)
     const { data: deal, error: insertError } = await supabaseAdmin
       .from("deals")
-      .upsert({
-        id: dealData.id,
+      .insert({
+        id: dealId,
         title: dealData.title,
         price: dealData.price,
         original_price: dealData.original_price || null,
@@ -81,8 +134,6 @@ serve(async (req: Request) => {
         in_stock: dealData.in_stock ?? true,
         fetched_at: dealData.fetched_at || new Date().toISOString(),
         posted_at: dealData.posted_at || new Date().toISOString(),
-      }, {
-        onConflict: "id",
       })
       .select()
       .single();
