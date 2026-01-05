@@ -12,12 +12,13 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { deal, trackedUrl, pageUrl } = body;
+    const { deal, trackedUrl, pageUrl, platform = 'general' } = body;
     
     console.log("Received request:", { 
       dealTitle: deal?.title, 
       hasTrackedUrl: !!trackedUrl, 
-      pageUrl 
+      pageUrl,
+      platform
     });
     
     if (!deal || !deal.title) {
@@ -37,6 +38,31 @@ serve(async (req) => {
       return `$${Number(price).toFixed(2)}`;
     };
 
+    // Platform-specific prompts
+    let platformInstructions = "";
+    if (platform === 'whatsapp') {
+      platformInstructions = `
+- Format for WhatsApp: use emojis liberally
+- Use line breaks for readability
+- Keep it conversational and personal
+- Great for sharing with friends and family
+- Add urgency if there's a good discount
+- End with the link on its own line: ${pageUrl}`;
+    } else if (platform === 'facebook') {
+      platformInstructions = `
+- Format for Facebook: engaging and shareable
+- Can be slightly longer (up to 300 characters)
+- Use 2-3 relevant emojis
+- Make it feel like a personal recommendation
+- Encourage engagement (questions work well)
+- End with: Check it out 👉 ${pageUrl}`;
+    } else {
+      platformInstructions = `
+- Keep it under 280 characters
+- Include relevant emojis
+- End with "Check it out here: ${pageUrl}"`;
+    }
+
     // Create an engaging prompt for the AI
     const prompt = `Create an engaging social media post for this product deal:
 
@@ -50,9 +76,7 @@ ${deal.discount ? `Discount: ${Math.round(deal.discount)}% OFF` : ""}
 Requirements:
 - Make it exciting and attention-grabbing
 - Highlight the savings if there's a discount
-- Keep it under 280 characters
-- Include relevant emojis
-- End with "Check it out here: ${pageUrl}"
+${platformInstructions}
 - Do NOT include any hashtags
 - Sound enthusiastic but not overly salesy`;
 
