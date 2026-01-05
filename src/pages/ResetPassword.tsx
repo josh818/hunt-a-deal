@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { PublicNavigation } from "@/components/PublicNavigation";
@@ -18,7 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowLeft, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, CheckCircle, Eye, EyeOff } from "lucide-react";
 
 const requestResetSchema = z.object({
   email: z
@@ -53,6 +53,14 @@ const ResetPassword = () => {
   const [searchParams] = useSearchParams();
   const [emailSent, setEmailSent] = useState(false);
   const [resetComplete, setResetComplete] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Auto-redirect to sign-in after successful reset
+  useEffect(() => {
+    if (!resetComplete) return;
+    const t = window.setTimeout(() => navigate("/auth"), 1500);
+    return () => window.clearTimeout(t);
+  }, [resetComplete, navigate]);
 
   // Check if this is a password update (user clicked email link)
   const isUpdateMode = searchParams.get("type") === "recovery";
@@ -130,11 +138,14 @@ const ResetPassword = () => {
                 Your password has been successfully reset. You can now sign in with your new password.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button onClick={() => navigate("/auth")} className="w-full">
-                Go to Sign In
-              </Button>
-            </CardContent>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Redirecting you to sign in…
+                </p>
+                <Button onClick={() => navigate("/auth")} className="w-full">
+                  Go to Sign In
+                </Button>
+              </CardContent>
           </Card>
         </div>
         <Footer />
@@ -194,11 +205,28 @@ const ResetPassword = () => {
                       <FormItem>
                         <FormLabel>New Password</FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Min 6 chars with uppercase, lowercase, and number"
-                            {...field}
-                          />
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Min 6 chars with uppercase, lowercase, and number"
+                              {...field}
+                              className="pr-10"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                              onClick={() => setShowPassword((v) => !v)}
+                              aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -211,11 +239,28 @@ const ResetPassword = () => {
                       <FormItem>
                         <FormLabel>Confirm Password</FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Confirm your new password"
-                            {...field}
-                          />
+                          <div className="relative">
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="Confirm your new password"
+                              {...field}
+                              className="pr-10"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                              onClick={() => setShowConfirmPassword((v) => !v)}
+                              aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
