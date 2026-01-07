@@ -241,12 +241,16 @@ Deno.serve(async (req) => {
         return "Other";
       };
 
+      const imageUrl = getImageUrl(item);
+      const isPlaceholder = !imageUrl || imageUrl === "/placeholder.svg" || 
+        imageUrl.includes("placeholder") || imageUrl.includes("No+Image");
+
       return {
         id: generateStableDealId(item, index),
         title: item.title || "Product",
         description: item.description || null,
         price: price,
-        image_url: getImageUrl(item),
+        image_url: imageUrl,
         original_price: originalPrice > 0 ? originalPrice : null,
         discount: discount,
         product_url: item.url || "",
@@ -258,6 +262,9 @@ Deno.serve(async (req) => {
         coupon_code: item.coupon_code || item.couponCode || null,
         posted_at: parsePostedAt(item.timestamp),
         fetched_at: new Date().toISOString(),
+        // Mark image_ready based on whether we have a real image URL
+        image_ready: !isPlaceholder && imageUrl.startsWith('http'),
+        image_retry_count: 0,
       };
     }).filter(deal => deal !== null);
 

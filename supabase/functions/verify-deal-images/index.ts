@@ -112,32 +112,77 @@ async function scrapeImageFromPage(productUrl: string): Promise<string | null> {
   }
 }
 
+// Additional Amazon image URL patterns to try
+function getExtendedAmazonImageUrls(asin: string): string[] {
+  const prefixes = [
+    `https://m.media-amazon.com/images/I/${asin}`,
+    `https://images-na.ssl-images-amazon.com/images/I/${asin}`,
+  ];
+  const suffixes = [
+    "._AC_SL1500_.jpg",
+    "._AC_SL1200_.jpg",
+    "._AC_SL1000_.jpg",
+    "._AC_SL800_.jpg",
+    "._AC_SL500_.jpg",
+    "._AC_SX679_.jpg",
+    "._AC_SX522_.jpg",
+    ".jpg",
+  ];
+  
+  const urls: string[] = [];
+  for (const prefix of prefixes) {
+    for (const suffix of suffixes) {
+      urls.push(prefix + suffix);
+    }
+  }
+  return urls;
+}
+
 async function verifyAndGetImageUrl(deal: { id: string; image_url: string | null; product_url: string; title: string }): Promise<string | null> {
-  // 1. Check existing image_url
+  console.log(`[${deal.id}] Verifying image...`);
+  
+  // 1. Check existing image_url first
   if (deal.image_url && !isPlaceholderUrl(deal.image_url)) {
     const result = await tryFetchImage(deal.image_url);
-    if (result.ok) return deal.image_url;
+    if (result.ok) {
+      console.log(`[${deal.id}] ✓ Existing image URL works`);
+      return deal.image_url;
+    }
+    console.log(`[${deal.id}] ✗ Existing image URL failed`);
   }
   
-  // 2. Try Amazon CDN if it's an Amazon URL
+  // 2. Try Amazon CDN with extended patterns
   if (deal.product_url) {
     const asin = extractASIN(deal.product_url);
     if (asin) {
-      const cdnUrls = getAmazonImageUrls(asin);
-      for (const url of cdnUrls) {
-        const result = await tryFetchImage(url);
-        if (result.ok) return url;
+      console.log(`[${deal.id}] Trying ASIN: ${asin}`);
+      const cdnUrls = getExtendedAmazonImageUrls(asin);
+      
+      // Try URLs in parallel batches for speed
+      for (let i = 0; i < cdnUrls.length; i += 4) {
+        const batch = cdnUrls.slice(i, i + 4);
+        const results = await Promise.all(batch.map(url => tryFetchImage(url).then(r => ({ url, ...r }))));
+        const working = results.find(r => r.ok);
+        if (working) {
+          console.log(`[${deal.id}] ✓ Found working CDN URL`);
+          return working.url;
+        }
       }
     }
     
-    // 3. Try scraping the page
+    // 3. Try scraping the page as last resort
+    console.log(`[${deal.id}] Trying page scrape...`);
     const scrapedUrl = await scrapeImageFromPage(deal.product_url);
     if (scrapedUrl) {
       const result = await tryFetchImage(scrapedUrl);
-      if (result.ok) return scrapedUrl;
+      if (result.ok) {
+        console.log(`[${deal.id}] ✓ Scraped image works`);
+        return scrapedUrl;
+      }
     }
   }
   
+  console.log(`[${deal.id}] ✗ No valid image found`);
   return null;
 }
 

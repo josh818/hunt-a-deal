@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { RefreshCw, Image, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
+import { RefreshCw, Image, CheckCircle, XCircle, Clock, Loader2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 export function AdminImageStatus() {
@@ -98,10 +98,16 @@ export function AdminImageStatus() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg font-medium flex items-center gap-2">
-          <Image className="h-5 w-5" />
-          Image Status
-        </CardTitle>
+        <div>
+          <CardTitle className="text-lg font-medium flex items-center gap-2">
+            <Image className="h-5 w-5" />
+            Image Status
+          </CardTitle>
+          <CardDescription className="flex items-center gap-1 mt-1">
+            <Zap className="h-3 w-3 text-green-500" />
+            Auto-verifies every 10 min
+          </CardDescription>
+        </div>
         <div className="flex gap-2">
           {(stats?.failed || 0) > 0 && (
             <Button
