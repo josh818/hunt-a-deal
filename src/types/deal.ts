@@ -15,4 +15,6 @@ export interface Deal {
   couponCode?: string;
   postedAt?: string;
   fetchedAt?: string;
+  imageReady?: boolean;
+  verifiedImageUrl?: string;
 }

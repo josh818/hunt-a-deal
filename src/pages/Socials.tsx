@@ -32,7 +32,7 @@ const fetchDeals = async (): Promise<Deal[]> => {
     price: parseFloat(item.price),
     originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
     discount: item.discount ? parseFloat(item.discount) : undefined,
-    imageUrl: item.image_url,
+    imageUrl: item.verified_image_url || item.image_url,
     productUrl: item.product_url,
     category: item.category,
     rating: item.rating ? parseFloat(item.rating) : undefined,
@@ -41,6 +41,8 @@ const fetchDeals = async (): Promise<Deal[]> => {
     inStock: item.in_stock,
     couponCode: item.coupon_code,
     fetchedAt: item.fetched_at,
+    imageReady: item.image_ready,
+    verifiedImageUrl: item.verified_image_url,
   }));
 };
 
@@ -64,10 +66,13 @@ const Socials = () => {
   });
 
   const generateSocialPost = async (deal: Deal) => {
-    const canLoadImage = await prefetchImage(getDealImageSrc(deal, { cacheBust: true }));
-    if (!canLoadImage) {
-      toast.error("Image not ready yet — holding this post until we have one.");
-      return;
+    // Fast-path check if already verified in DB
+    if (!deal.imageReady) {
+      const canLoadImage = await prefetchImage(getDealImageSrc(deal, { cacheBust: true }));
+      if (!canLoadImage) {
+        toast.error("Image not ready yet — holding this post until we have one.");
+        return;
+      }
     }
 
     setSocialPosts(prev => ({

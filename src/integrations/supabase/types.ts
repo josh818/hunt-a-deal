@@ -193,6 +193,9 @@ export type Database = {
           discount: number | null
           fetched_at: string | null
           id: string
+          image_last_checked: string | null
+          image_ready: boolean | null
+          image_retry_count: number | null
           image_url: string
           in_stock: boolean | null
           original_price: number | null
@@ -203,6 +206,7 @@ export type Database = {
           review_count: number | null
           title: string
           updated_at: string | null
+          verified_image_url: string | null
         }
         Insert: {
           brand?: string | null
@@ -213,6 +217,9 @@ export type Database = {
           discount?: number | null
           fetched_at?: string | null
           id: string
+          image_last_checked?: string | null
+          image_ready?: boolean | null
+          image_retry_count?: number | null
           image_url: string
           in_stock?: boolean | null
           original_price?: number | null
@@ -223,6 +230,7 @@ export type Database = {
           review_count?: number | null
           title: string
           updated_at?: string | null
+          verified_image_url?: string | null
         }
         Update: {
           brand?: string | null
@@ -233,6 +241,9 @@ export type Database = {
           discount?: number | null
           fetched_at?: string | null
           id?: string
+          image_last_checked?: string | null
+          image_ready?: boolean | null
+          image_retry_count?: number | null
           image_url?: string
           in_stock?: boolean | null
           original_price?: number | null
@@ -243,6 +254,7 @@ export type Database = {
           review_count?: number | null
           title?: string
           updated_at?: string | null
+          verified_image_url?: string | null
         }
         Relationships: []
       }

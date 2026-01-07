@@ -32,3 +32,6 @@ verify_jwt = true
 
 [functions.admin-delete-deal]
 verify_jwt = true
+
+[functions.verify-deal-images]
+verify_jwt = false

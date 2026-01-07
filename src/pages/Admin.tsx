@@ -26,6 +26,7 @@ import { AdminDealsManager } from "@/components/AdminDealsManager";
 import { CategoryRulesManager } from "@/components/CategoryRulesManager";
 import { ShareAnalytics } from "@/components/ShareAnalytics";
 import { ClickAnalytics } from "@/components/ClickAnalytics";
+import { AdminImageStatus } from "@/components/AdminImageStatus";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -456,7 +457,7 @@ const Admin = () => {
       
       <main className="container mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Deals</CardTitle>
@@ -487,6 +488,7 @@ const Admin = () => {
               <p className="text-xs text-muted-foreground">Approved partner projects</p>
             </CardContent>
           </Card>
+          <AdminImageStatus />
         </div>
 
         {/* Category Rules */}
