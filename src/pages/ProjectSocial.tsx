@@ -12,6 +12,7 @@ import { Share2, Copy, CheckCircle, AlertCircle, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Deal } from "@/types/deal";
 import { replaceTrackingCode } from "@/utils/trackingCode";
+import { getDealImageSrc, prefetchImage } from "@/utils/dealImages";
 
 const ProjectSocial = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -64,6 +65,12 @@ const ProjectSocial = () => {
 
   const generateSocialPost = async (deal: Deal) => {
     if (!project) return;
+
+    const canLoadImage = await prefetchImage(getDealImageSrc(deal, { cacheBust: true }));
+    if (!canLoadImage) {
+      toast.error("Image not ready yet — holding this post until we have one.");
+      return;
+    }
 
     setSocialPosts(prev => ({
       ...prev,

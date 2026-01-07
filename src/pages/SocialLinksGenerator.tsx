@@ -11,6 +11,7 @@ import { Share2, Copy, CheckCircle, AlertCircle, Sparkles, Download } from "luci
 import { toast } from "sonner";
 import { Deal } from "@/types/deal";
 import { replaceTrackingCode, getDefaultTrackingCode } from "@/utils/trackingCode";
+import { getDealImageSrc, prefetchImage } from "@/utils/dealImages";
 
 const fetchDeals = async (): Promise<Deal[]> => {
   const { data, error } = await supabase
@@ -59,6 +60,14 @@ const SocialLinksGenerator = () => {
   });
 
   const generateSocialPost = async (deal: Deal) => {
+    // Hard requirement: only generate a post when we can load a real image.
+    // If the image isn't available yet, we bail out so you don't post without visuals.
+    const canLoadImage = await prefetchImage(getDealImageSrc(deal, { cacheBust: true }));
+    if (!canLoadImage) {
+      toast.error("Image not ready yet — retrying acquisition. Try again in a moment.");
+      return;
+    }
+
     setSocialPosts(prev => ({
       ...prev,
       [deal.id]: {
@@ -73,7 +82,7 @@ const SocialLinksGenerator = () => {
     try {
       const trackedUrl = replaceTrackingCode(deal.productUrl, getDefaultTrackingCode());
       const pageUrl = `${window.location.origin}/test12345/sociallinks`;
-      
+
       const { data, error } = await supabase.functions.invoke('generate-social-post', {
         body: {
           deal: {

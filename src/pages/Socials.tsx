@@ -13,6 +13,7 @@ import { Copy, CheckCircle, AlertCircle, Sparkles, Download, MessageCircle, Face
 import { toast } from "sonner";
 import { Deal } from "@/types/deal";
 import { replaceTrackingCode, getDefaultTrackingCode } from "@/utils/trackingCode";
+import { getDealImageSrc, prefetchImage } from "@/utils/dealImages";
 
 const fetchDeals = async (): Promise<Deal[]> => {
   const { data, error } = await supabase
@@ -63,6 +64,12 @@ const Socials = () => {
   });
 
   const generateSocialPost = async (deal: Deal) => {
+    const canLoadImage = await prefetchImage(getDealImageSrc(deal, { cacheBust: true }));
+    if (!canLoadImage) {
+      toast.error("Image not ready yet — holding this post until we have one.");
+      return;
+    }
+
     setSocialPosts(prev => ({
       ...prev,
       [deal.id]: {
@@ -78,7 +85,7 @@ const Socials = () => {
     try {
       const trackedUrl = replaceTrackingCode(deal.productUrl, getDefaultTrackingCode());
       const pageUrl = `${window.location.origin}/deal/${deal.id}`;
-      
+
       // Generate WhatsApp post
       const whatsappResponse = await supabase.functions.invoke('generate-social-post', {
         body: {
@@ -158,6 +165,10 @@ const Socials = () => {
 
     for (const deal of deals) {
       if (socialPosts[deal.id]) continue;
+
+      // Only generate posts for deals that can actually load an image.
+      const canLoadImage = await prefetchImage(getDealImageSrc(deal, { cacheBust: true }));
+      if (!canLoadImage) continue;
       
       try {
         await generateSocialPost(deal);
@@ -341,11 +352,12 @@ const Socials = () => {
                   <CardHeader className="pb-3">
                     <div className="flex items-start gap-3">
                       {deal.imageUrl && (
-                        <img 
-                          src={deal.imageUrl} 
-                          alt={deal.title}
-                          className="h-16 w-16 object-contain rounded-md bg-muted"
-                        />
+                      <img 
+                        src={getDealImageSrc(deal)}
+                        alt={deal.title}
+                        loading="lazy"
+                        className="h-16 w-16 object-contain rounded-md bg-muted"
+                      />
                       )}
                       <div className="flex-1 min-w-0">
                         <CardTitle className="text-sm font-medium line-clamp-2">{deal.title}</CardTitle>
