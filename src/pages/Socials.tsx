@@ -9,7 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, CheckCircle, AlertCircle, Sparkles, Download, MessageCircle, Facebook, Share2 } from "lucide-react";
+import { Copy, CheckCircle, AlertCircle, Sparkles, Download, MessageCircle, Facebook, Share2, ImageIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Deal } from "@/types/deal";
 import { replaceTrackingCode, getDefaultTrackingCode } from "@/utils/trackingCode";
@@ -59,11 +61,15 @@ const Socials = () => {
   const [socialPosts, setSocialPosts] = useState<Record<string, SocialPost>>({});
   const [isGeneratingBulk, setIsGeneratingBulk] = useState(false);
   const [activeTab, setActiveTab] = useState<"whatsapp" | "facebook">("whatsapp");
+  const [imageReadyOnly, setImageReadyOnly] = useState(true);
   
   const { data: deals, isLoading, error } = useQuery({
     queryKey: ["deals-socials"],
     queryFn: fetchDeals,
   });
+
+  // Filter deals based on image ready status
+  const filteredDeals = deals?.filter(deal => !imageReadyOnly || deal.imageReady) || [];
 
   const generateSocialPost = async (deal: Deal) => {
     // Fast-path check if already verified in DB
@@ -163,17 +169,19 @@ const Socials = () => {
   };
 
   const generateBulkPosts = async () => {
-    if (!deals || deals.length === 0) return;
+    if (!filteredDeals || filteredDeals.length === 0) return;
     
     setIsGeneratingBulk(true);
     let generated = 0;
 
-    for (const deal of deals) {
+    for (const deal of filteredDeals) {
       if (socialPosts[deal.id]) continue;
 
-      // Only generate posts for deals that can actually load an image.
-      const canLoadImage = await prefetchImage(getDealImageSrc(deal, { cacheBust: true }));
-      if (!canLoadImage) continue;
+      // Skip image check if already marked ready in DB
+      if (!deal.imageReady) {
+        const canLoadImage = await prefetchImage(getDealImageSrc(deal, { cacheBust: true }));
+        if (!canLoadImage) continue;
+      }
       
       try {
         await generateSocialPost(deal);
@@ -255,6 +263,8 @@ const Socials = () => {
   };
 
   const generatedCount = Object.values(socialPosts).filter(p => !p.isGenerating).length;
+  const imageReadyCount = deals?.filter(d => d.imageReady).length || 0;
+  const totalDealsCount = deals?.length || 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -275,13 +285,24 @@ const Socials = () => {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-muted/50">
+                <Switch
+                  id="image-ready-filter"
+                  checked={imageReadyOnly}
+                  onCheckedChange={setImageReadyOnly}
+                />
+                <Label htmlFor="image-ready-filter" className="text-sm flex items-center gap-1.5 cursor-pointer">
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  Image Ready Only ({imageReadyCount}/{totalDealsCount})
+                </Label>
+              </div>
               <Button
                 onClick={generateBulkPosts}
-                disabled={isGeneratingBulk || !deals || deals.length === 0}
+                disabled={isGeneratingBulk || filteredDeals.length === 0}
                 className="gap-2"
               >
                 <Sparkles className="h-4 w-4" />
-                {isGeneratingBulk ? "Generating..." : "Generate All"}
+                {isGeneratingBulk ? "Generating..." : `Generate All (${filteredDeals.length})`}
               </Button>
               <Button
                 onClick={exportToCSV}
@@ -343,9 +364,9 @@ const Socials = () => {
               </Card>
             ))}
           </div>
-        ) : deals && deals.length > 0 ? (
+        ) : filteredDeals.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {deals.map((deal) => {
+            {filteredDeals.map((deal) => {
               const post = socialPosts[deal.id];
               const discount = deal.originalPrice 
                 ? Math.round(((deal.originalPrice - deal.price) / deal.originalPrice) * 100)
