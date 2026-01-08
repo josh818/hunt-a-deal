@@ -18,8 +18,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Calendar, Clock, Check, X, RefreshCw, Copy, Trash2, CheckCheck } from "lucide-react";
+import { Calendar, Clock, Check, X, RefreshCw, Copy, Trash2, CheckCheck, ClipboardList, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ScheduledPost = {
   id: string;
@@ -201,6 +202,35 @@ export function ScheduledPostsManager() {
     });
   };
 
+  const copyAllPosts = () => {
+    if (!posts?.length) return;
+    const allTexts = posts.map((post, index) => {
+      const deal = deals?.[post.deal_id];
+      return `--- Post ${index + 1} (${post.platform}) ---\n${deal?.title || ''}\n\n${post.generated_text}`;
+    }).join('\n\n');
+    navigator.clipboard.writeText(allTexts);
+    toast.success(`Copied ${posts.length} posts to clipboard!`, {
+      description: "All pending posts are ready to share",
+    });
+  };
+
+  const shareToWhatsApp = (text: string) => {
+    const encoded = encodeURIComponent(text);
+    window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    toast.success("Opening WhatsApp", {
+      description: "Paste the post in your group",
+    });
+  };
+
+  const shareToFacebook = (text: string) => {
+    // Facebook doesn't allow pre-filled text, so we copy and open
+    navigator.clipboard.writeText(text);
+    window.open('https://www.facebook.com/', '_blank');
+    toast.success("Opening Facebook", {
+      description: "Text copied - paste it in your group",
+    });
+  };
+
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case "whatsapp":
@@ -243,32 +273,42 @@ export function ScheduledPostsManager() {
               <TabsTrigger value="failed">Failed</TabsTrigger>
             </TabsList>
             {activeTab === "pending" && (stats?.pending || 0) > 0 && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    disabled={markAllPostedMutation.isPending}
-                    className="gap-2"
-                  >
-                    <CheckCheck className="h-4 w-4" />
-                    Mark All Posted ({stats?.pending})
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Mark all posts as posted?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will mark {stats?.pending} pending post{stats?.pending !== 1 ? 's' : ''} as posted. 
-                      Make sure you've already shared all the posts before confirming.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => markAllPostedMutation.mutate()}>
-                      Yes, mark all as posted
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={copyAllPosts}
+                  className="gap-2"
+                >
+                  <ClipboardList className="h-4 w-4" />
+                  Copy All
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      disabled={markAllPostedMutation.isPending}
+                      className="gap-2"
+                    >
+                      <CheckCheck className="h-4 w-4" />
+                      Mark All Posted ({stats?.pending})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Mark all posts as posted?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will mark {stats?.pending} pending post{stats?.pending !== 1 ? 's' : ''} as posted. 
+                        Make sure you've already shared all the posts before confirming.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => markAllPostedMutation.mutate()}>
+                        Yes, mark all as posted
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             )}
           </div>
 
@@ -311,39 +351,104 @@ export function ScheduledPostsManager() {
                             )}
                           </div>
                           <div className="flex flex-col gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => copyToClipboard(post.generated_text, post.platform)}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                            {activeTab === "pending" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => markPostedMutation.mutate(post.id)}
-                                disabled={markPostedMutation.isPending}
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => copyToClipboard(post.generated_text, post.platform)}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Copy to clipboard</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            
+                            {post.platform === "whatsapp" && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="bg-green-50 hover:bg-green-100 border-green-200"
+                                      onClick={() => shareToWhatsApp(post.generated_text)}
+                                    >
+                                      <ExternalLink className="h-4 w-4 text-green-600" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Share to WhatsApp</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => regeneratePostMutation.mutate(post)}
-                              disabled={regeneratePostMutation.isPending}
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => deletePostMutation.mutate(post.id)}
-                              disabled={deletePostMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            
+                            {post.platform === "facebook" && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                                      onClick={() => shareToFacebook(post.generated_text)}
+                                    >
+                                      <ExternalLink className="h-4 w-4 text-blue-600" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Share to Facebook</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            
+                            {activeTab === "pending" && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => markPostedMutation.mutate(post.id)}
+                                      disabled={markPostedMutation.isPending}
+                                    >
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Mark as posted</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => regeneratePostMutation.mutate(post)}
+                                    disabled={regeneratePostMutation.isPending}
+                                  >
+                                    <RefreshCw className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Regenerate with AI</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => deletePostMutation.mutate(post.id)}
+                                    disabled={deletePostMutation.isPending}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete post</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                       </Card>
