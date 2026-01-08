@@ -6,6 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Calendar, Clock, Check, X, RefreshCw, Copy, Trash2, CheckCheck } from "lucide-react";
 import { format } from "date-fns";
@@ -232,14 +243,32 @@ export function ScheduledPostsManager() {
               <TabsTrigger value="failed">Failed</TabsTrigger>
             </TabsList>
             {activeTab === "pending" && (stats?.pending || 0) > 0 && (
-              <Button
-                onClick={() => markAllPostedMutation.mutate()}
-                disabled={markAllPostedMutation.isPending}
-                className="gap-2"
-              >
-                <CheckCheck className="h-4 w-4" />
-                Mark All Posted ({stats?.pending})
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    disabled={markAllPostedMutation.isPending}
+                    className="gap-2"
+                  >
+                    <CheckCheck className="h-4 w-4" />
+                    Mark All Posted ({stats?.pending})
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Mark all posts as posted?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will mark {stats?.pending} pending post{stats?.pending !== 1 ? 's' : ''} as posted. 
+                      Make sure you've already shared all the posts before confirming.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => markAllPostedMutation.mutate()}>
+                      Yes, mark all as posted
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
 
