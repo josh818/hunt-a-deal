@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Calendar, Clock, MessageSquare, Check, X, RefreshCw, Copy, Trash2 } from "lucide-react";
+import { Calendar, Clock, Check, X, RefreshCw, Copy, Trash2, CheckCheck } from "lucide-react";
 import { format } from "date-fns";
 
 type ScheduledPost = {
@@ -90,7 +90,31 @@ export function ScheduledPostsManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scheduled-posts"] });
       queryClient.invalidateQueries({ queryKey: ["scheduled-posts-stats"] });
-      toast.success("Post marked as posted");
+      toast.success("Post marked as posted", {
+        description: "The post has been moved to the Posted tab",
+      });
+    },
+  });
+
+  const markAllPostedMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("scheduled_posts")
+        .update({ status: "posted", posted_at: new Date().toISOString() })
+        .eq("status", "pending");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["scheduled-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-posts-stats"] });
+      toast.success(`All pending posts marked as posted!`, {
+        description: `${stats?.pending || 0} posts have been moved to the Posted tab`,
+      });
+    },
+    onError: (error) => {
+      toast.error("Failed to mark posts", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
     },
   });
 
@@ -105,7 +129,14 @@ export function ScheduledPostsManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scheduled-posts"] });
       queryClient.invalidateQueries({ queryKey: ["scheduled-posts-stats"] });
-      toast.success("Post deleted");
+      toast.success("Post deleted", {
+        description: "The scheduled post has been removed",
+      });
+    },
+    onError: (error) => {
+      toast.error("Failed to delete post", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
     },
   });
 
@@ -141,16 +172,22 @@ export function ScheduledPostsManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["scheduled-posts"] });
-      toast.success("Post regenerated");
+      toast.success("Post regenerated with AI", {
+        description: "Fresh content has been generated for this post",
+      });
     },
     onError: (error) => {
-      toast.error("Failed to regenerate: " + (error instanceof Error ? error.message : "Unknown error"));
+      toast.error("Failed to regenerate", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
     },
   });
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, platform: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
+    toast.success("Copied to clipboard!", {
+      description: `Ready to paste in ${platform}`,
+    });
   };
 
   const getPlatformIcon = (platform: string) => {
@@ -188,11 +225,23 @@ export function ScheduledPostsManager() {
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="posted">Posted</TabsTrigger>
-            <TabsTrigger value="failed">Failed</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between mb-4">
+            <TabsList>
+              <TabsTrigger value="pending">Pending</TabsTrigger>
+              <TabsTrigger value="posted">Posted</TabsTrigger>
+              <TabsTrigger value="failed">Failed</TabsTrigger>
+            </TabsList>
+            {activeTab === "pending" && (stats?.pending || 0) > 0 && (
+              <Button
+                onClick={() => markAllPostedMutation.mutate()}
+                disabled={markAllPostedMutation.isPending}
+                className="gap-2"
+              >
+                <CheckCheck className="h-4 w-4" />
+                Mark All Posted ({stats?.pending})
+              </Button>
+            )}
+          </div>
 
           <TabsContent value={activeTab}>
             {isLoading ? (
@@ -236,7 +285,7 @@ export function ScheduledPostsManager() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => copyToClipboard(post.generated_text)}
+                              onClick={() => copyToClipboard(post.generated_text, post.platform)}
                             >
                               <Copy className="h-4 w-4" />
                             </Button>
