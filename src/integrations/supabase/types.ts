@@ -370,6 +370,7 @@ export type Database = {
           page_url: string
           platform: string
           posted_at: string | null
+          scheduled_for: string | null
           status: string
           tracked_url: string | null
         }
@@ -382,6 +383,7 @@ export type Database = {
           page_url: string
           platform: string
           posted_at?: string | null
+          scheduled_for?: string | null
           status?: string
           tracked_url?: string | null
         }
@@ -394,6 +396,7 @@ export type Database = {
           page_url?: string
           platform?: string
           posted_at?: string | null
+          scheduled_for?: string | null
           status?: string
           tracked_url?: string | null
         }
