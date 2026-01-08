@@ -128,10 +128,62 @@ async function scrapeImageFromPage(productUrl: string): Promise<string | null> {
   }
 }
 
-async function verifyAndGetImageUrl(deal: { id: string; image_url: string | null; product_url: string; title: string }): Promise<string | null> {
+// Generate an AI product image using Lovable AI
+async function generateAIProductImage(title: string, category?: string): Promise<string | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    console.log("LOVABLE_API_KEY not set, skipping AI image generation");
+    return null;
+  }
+
+  try {
+    console.log(`Generating AI image for: ${title.substring(0, 50)}...`);
+    
+    const prompt = `Create a clean, professional product photograph of: ${title}. 
+${category ? `Product category: ${category}.` : ''}
+Style: E-commerce product photo with pure white background, professional studio lighting, centered composition.
+The product should look realistic and high-quality, suitable for an online shopping website.
+Ultra high resolution, sharp focus, no text or watermarks.`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [{ role: "user", content: prompt }],
+        modalities: ["image", "text"],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`AI image generation failed: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+    if (!imageUrl || !imageUrl.startsWith("data:image")) {
+      console.error("Invalid AI image response");
+      return null;
+    }
+
+    console.log("✓ AI image generated successfully");
+    return imageUrl;
+  } catch (error) {
+    console.error("Error generating AI image:", error);
+    return null;
+  }
+}
+
+async function verifyAndGetImageUrl(deal: { id: string; image_url: string | null; product_url: string; title: string; category?: string | null }): Promise<string | null> {
   console.log(`[${deal.id}] Verifying image...`);
   
-  if (deal.image_url && !isPlaceholderUrl(deal.image_url)) {
+  // Priority 1: Check existing image URL
+  if (deal.image_url && !isPlaceholderUrl(deal.image_url) && deal.image_url.startsWith("http")) {
     const result = await tryFetchImage(deal.image_url);
     if (result.ok) {
       console.log(`[${deal.id}] ✓ Existing image URL works`);
@@ -140,7 +192,8 @@ async function verifyAndGetImageUrl(deal: { id: string; image_url: string | null
     console.log(`[${deal.id}] ✗ Existing image URL failed`);
   }
   
-  if (deal.product_url) {
+  // Priority 2: Try Amazon CDN URLs if we have an ASIN
+  if (deal.product_url && deal.product_url.startsWith("http")) {
     const asin = extractASIN(deal.product_url);
     if (asin) {
       console.log(`[${deal.id}] Trying ASIN: ${asin}`);
@@ -157,6 +210,7 @@ async function verifyAndGetImageUrl(deal: { id: string; image_url: string | null
       }
     }
     
+    // Priority 3: Try scraping the product page
     console.log(`[${deal.id}] Trying page scrape...`);
     const scrapedUrl = await scrapeImageFromPage(deal.product_url);
     if (scrapedUrl) {
@@ -166,6 +220,14 @@ async function verifyAndGetImageUrl(deal: { id: string; image_url: string | null
         return scrapedUrl;
       }
     }
+  }
+  
+  // Priority 4: Generate AI product image as fallback
+  console.log(`[${deal.id}] Trying AI image generation...`);
+  const aiImageUrl = await generateAIProductImage(deal.title, deal.category || undefined);
+  if (aiImageUrl) {
+    console.log(`[${deal.id}] ✓ AI image generated`);
+    return aiImageUrl;
   }
   
   console.log(`[${deal.id}] ✗ No valid image found`);

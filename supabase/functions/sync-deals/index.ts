@@ -245,6 +245,24 @@ Deno.serve(async (req) => {
       const isPlaceholder = !imageUrl || imageUrl === "/placeholder.svg" || 
         imageUrl.includes("placeholder") || imageUrl.includes("No+Image");
 
+      // Convert relative product URLs to full Slickdeals URLs
+      let productUrl = item.url || "";
+      if (productUrl && productUrl.startsWith("/")) {
+        productUrl = `https://slickdeals.net${productUrl}`;
+        console.log(`Converted relative URL to: ${productUrl}`);
+      }
+
+      // Try to extract Amazon URL from Slickdeals URL if possible
+      // Slickdeals URLs often redirect to Amazon, but we store the Slickdeals URL as a fallback
+      let amazonUrl = "";
+      if (item.url) {
+        // Check if we have direct Amazon URL in the original data
+        const amazonMatch = item.url.match(/(https?:\/\/[^"'\s]*amazon\.[^"'\s]+)/i);
+        if (amazonMatch) {
+          amazonUrl = amazonMatch[1];
+        }
+      }
+
       return {
         id: generateStableDealId(item, index),
         title: item.title || "Product",
@@ -253,7 +271,7 @@ Deno.serve(async (req) => {
         image_url: imageUrl,
         original_price: originalPrice > 0 ? originalPrice : null,
         discount: discount,
-        product_url: item.url || "",
+        product_url: amazonUrl || productUrl, // Prefer Amazon URL if available
         category: extractCategory(item.title),
         rating: item.rating ? parseFloat(String(item.rating)) : null,
         review_count: item.reviewCount || item.reviews || null,
