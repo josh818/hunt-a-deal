@@ -360,6 +360,53 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_posts: {
+        Row: {
+          created_at: string
+          deal_id: string
+          error_message: string | null
+          generated_text: string
+          id: string
+          page_url: string
+          platform: string
+          posted_at: string | null
+          status: string
+          tracked_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          deal_id: string
+          error_message?: string | null
+          generated_text: string
+          id?: string
+          page_url: string
+          platform: string
+          posted_at?: string | null
+          status?: string
+          tracked_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string
+          error_message?: string | null
+          generated_text?: string
+          id?: string
+          page_url?: string
+          platform?: string
+          posted_at?: string | null
+          status?: string
+          tracked_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_posts_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       share_tracking: {
         Row: {
           id: string
