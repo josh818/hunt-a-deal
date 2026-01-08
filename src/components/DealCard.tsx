@@ -121,7 +121,12 @@ export const DealCard = ({ deal, trackingCode, projectId }: DealCardProps) => {
     window.open(serverVerifiedUrl || displayUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const imageSrc = getDealImageSrc(deal);
+  const imageSrc = getDealImageSrc({
+    imageUrl: deal.imageUrl,
+    productUrl: deal.productUrl,
+    title: deal.title,
+    verifiedImageUrl: deal.verifiedImageUrl,
+  });
 
   return (
     <Card className="group overflow-hidden transition-all hover:shadow-lg flex flex-col h-full text-sm sm:text-base">
