@@ -27,6 +27,7 @@ import { CategoryRulesManager } from "@/components/CategoryRulesManager";
 import { ShareAnalytics } from "@/components/ShareAnalytics";
 import { ClickAnalytics } from "@/components/ClickAnalytics";
 import { AdminImageStatus } from "@/components/AdminImageStatus";
+import { ScheduledPostsManager } from "@/components/ScheduledPostsManager";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -489,6 +490,11 @@ const Admin = () => {
             </CardContent>
           </Card>
           <AdminImageStatus />
+        </div>
+
+        {/* Scheduled Posts Manager */}
+        <div className="mb-8">
+          <ScheduledPostsManager />
         </div>
 
         {/* Category Rules */}

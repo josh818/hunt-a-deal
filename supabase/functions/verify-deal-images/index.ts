@@ -12,6 +12,8 @@ const PLACEHOLDER_PATTERNS = [
   "No%20Image",
 ];
 
+const PLATFORMS = ["whatsapp", "facebook", "general"] as const;
+
 function isPlaceholderUrl(url?: string | null): boolean {
   if (!url) return true;
   const lower = url.toLowerCase();
@@ -33,13 +35,29 @@ function extractASIN(url: string): string | null {
   return null;
 }
 
-function getAmazonImageUrls(asin: string): string[] {
-  return [
-    `https://m.media-amazon.com/images/I/${asin}._AC_SL1500_.jpg`,
-    `https://m.media-amazon.com/images/I/${asin}._AC_SL1000_.jpg`,
-    `https://m.media-amazon.com/images/I/${asin}._AC_SL500_.jpg`,
-    `https://images-na.ssl-images-amazon.com/images/I/${asin}._AC_SL1500_.jpg`,
+function getExtendedAmazonImageUrls(asin: string): string[] {
+  const prefixes = [
+    `https://m.media-amazon.com/images/I/${asin}`,
+    `https://images-na.ssl-images-amazon.com/images/I/${asin}`,
   ];
+  const suffixes = [
+    "._AC_SL1500_.jpg",
+    "._AC_SL1200_.jpg",
+    "._AC_SL1000_.jpg",
+    "._AC_SL800_.jpg",
+    "._AC_SL500_.jpg",
+    "._AC_SX679_.jpg",
+    "._AC_SX522_.jpg",
+    ".jpg",
+  ];
+  
+  const urls: string[] = [];
+  for (const prefix of prefixes) {
+    for (const suffix of suffixes) {
+      urls.push(prefix + suffix);
+    }
+  }
+  return urls;
 }
 
 async function tryFetchImage(url: string, timeoutMs = 5000): Promise<{ ok: boolean; contentType?: string }> {
@@ -59,7 +77,6 @@ async function tryFetchImage(url: string, timeoutMs = 5000): Promise<{ ok: boole
     const contentType = response.headers.get("content-type") || "";
     const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
     
-    // Valid if it's an image and has reasonable size (> 1KB)
     if (contentType.startsWith("image/") && contentLength > 1000) {
       return { ok: true, contentType };
     }
@@ -88,7 +105,6 @@ async function scrapeImageFromPage(productUrl: string): Promise<string | null> {
     
     const html = await response.text();
     
-    // Try various image patterns
     const patterns = [
       /<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i,
       /<img[^>]*id="landingImage"[^>]*src="([^"]+)"/i,
@@ -112,36 +128,9 @@ async function scrapeImageFromPage(productUrl: string): Promise<string | null> {
   }
 }
 
-// Additional Amazon image URL patterns to try
-function getExtendedAmazonImageUrls(asin: string): string[] {
-  const prefixes = [
-    `https://m.media-amazon.com/images/I/${asin}`,
-    `https://images-na.ssl-images-amazon.com/images/I/${asin}`,
-  ];
-  const suffixes = [
-    "._AC_SL1500_.jpg",
-    "._AC_SL1200_.jpg",
-    "._AC_SL1000_.jpg",
-    "._AC_SL800_.jpg",
-    "._AC_SL500_.jpg",
-    "._AC_SX679_.jpg",
-    "._AC_SX522_.jpg",
-    ".jpg",
-  ];
-  
-  const urls: string[] = [];
-  for (const prefix of prefixes) {
-    for (const suffix of suffixes) {
-      urls.push(prefix + suffix);
-    }
-  }
-  return urls;
-}
-
 async function verifyAndGetImageUrl(deal: { id: string; image_url: string | null; product_url: string; title: string }): Promise<string | null> {
   console.log(`[${deal.id}] Verifying image...`);
   
-  // 1. Check existing image_url first
   if (deal.image_url && !isPlaceholderUrl(deal.image_url)) {
     const result = await tryFetchImage(deal.image_url);
     if (result.ok) {
@@ -151,14 +140,12 @@ async function verifyAndGetImageUrl(deal: { id: string; image_url: string | null
     console.log(`[${deal.id}] ✗ Existing image URL failed`);
   }
   
-  // 2. Try Amazon CDN with extended patterns
   if (deal.product_url) {
     const asin = extractASIN(deal.product_url);
     if (asin) {
       console.log(`[${deal.id}] Trying ASIN: ${asin}`);
       const cdnUrls = getExtendedAmazonImageUrls(asin);
       
-      // Try URLs in parallel batches for speed
       for (let i = 0; i < cdnUrls.length; i += 4) {
         const batch = cdnUrls.slice(i, i + 4);
         const results = await Promise.all(batch.map(url => tryFetchImage(url).then(r => ({ url, ...r }))));
@@ -170,7 +157,6 @@ async function verifyAndGetImageUrl(deal: { id: string; image_url: string | null
       }
     }
     
-    // 3. Try scraping the page as last resort
     console.log(`[${deal.id}] Trying page scrape...`);
     const scrapedUrl = await scrapeImageFromPage(deal.product_url);
     if (scrapedUrl) {
@@ -186,6 +172,154 @@ async function verifyAndGetImageUrl(deal: { id: string; image_url: string | null
   return null;
 }
 
+// Generate AI social post for a platform
+async function generateSocialPost(
+  supabaseUrl: string,
+  anonKey: string,
+  deal: { id: string; title: string; brand?: string; category?: string; price: number; original_price?: number; discount?: number },
+  platform: string
+): Promise<{ text: string; pageUrl: string } | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    console.log("LOVABLE_API_KEY not set, skipping AI post generation");
+    return null;
+  }
+
+  const pageUrl = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/deal/${deal.id}`;
+  
+  const formatPrice = (price: number | undefined) => {
+    if (price === undefined || price === null) return "N/A";
+    return `$${Number(price).toFixed(2)}`;
+  };
+
+  let platformInstructions = "";
+  if (platform === 'whatsapp') {
+    platformInstructions = `
+- Format for WhatsApp: use emojis liberally
+- Use line breaks for readability
+- Keep it conversational and personal
+- Add urgency if there's a good discount
+- End with the link on its own line: ${pageUrl}`;
+  } else if (platform === 'facebook') {
+    platformInstructions = `
+- Format for Facebook: engaging and shareable
+- Can be slightly longer (up to 300 characters)
+- Use 2-3 relevant emojis
+- Make it feel like a personal recommendation
+- Encourage engagement (questions work well)
+- End with: Check it out 👉 ${pageUrl}`;
+  } else {
+    platformInstructions = `
+- Keep it under 280 characters
+- Include relevant emojis
+- End with "Check it out here: ${pageUrl}"`;
+  }
+
+  const prompt = `Create an engaging social media post for this product deal:
+
+Product: ${deal.title}
+Brand: ${deal.brand || "N/A"}
+Category: ${deal.category || "N/A"}
+Current Price: ${formatPrice(deal.price)}
+${deal.original_price ? `Original Price: ${formatPrice(deal.original_price)}` : ""}
+${deal.discount ? `Discount: ${Math.round(deal.discount)}% OFF` : ""}
+
+Requirements:
+- Make it exciting and attention-grabbing
+- Highlight the savings if there's a discount
+${platformInstructions}
+- Do NOT include any hashtags
+- Sound enthusiastic but not overly salesy`;
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: "You are a social media expert who creates engaging, concise posts that drive clicks. Be enthusiastic but authentic." },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`AI API error: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content;
+    
+    if (!text) return null;
+    
+    return { text, pageUrl };
+  } catch (error) {
+    console.error("Error generating social post:", error);
+    return null;
+  }
+}
+
+// Queue social posts for a verified deal
+async function queueSocialPosts(
+  supabase: any,
+  supabaseUrl: string,
+  anonKey: string,
+  deal: { id: string; title: string; brand?: string | null; category?: string | null; price: number; original_price?: number | null; discount?: number | null }
+): Promise<number> {
+  let queued = 0;
+  
+  // Check if posts already exist for this deal
+  const { data: existing } = await supabase
+    .from("scheduled_posts")
+    .select("platform")
+    .eq("deal_id", deal.id);
+  
+  const existingPlatforms = new Set((existing || []).map((p: any) => p.platform));
+  
+  for (const platform of PLATFORMS) {
+    if (existingPlatforms.has(platform)) {
+      console.log(`[${deal.id}] Post already queued for ${platform}`);
+      continue;
+    }
+    
+    const result = await generateSocialPost(supabaseUrl, anonKey, {
+      id: deal.id,
+      title: deal.title,
+      brand: deal.brand || undefined,
+      category: deal.category || undefined,
+      price: deal.price,
+      original_price: deal.original_price || undefined,
+      discount: deal.discount || undefined,
+    }, platform);
+    
+    if (result) {
+      const { error } = await supabase
+        .from("scheduled_posts")
+        .insert({
+          deal_id: deal.id,
+          platform,
+          generated_text: result.text,
+          page_url: result.pageUrl,
+          status: "pending",
+        });
+      
+      if (!error) {
+        queued++;
+        console.log(`[${deal.id}] ✓ Queued ${platform} post`);
+      } else {
+        console.error(`[${deal.id}] Error queueing ${platform} post:`, error);
+      }
+    }
+  }
+  
+  return queued;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -194,28 +328,29 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request body for options
     let batchSize = 10;
     let maxRetries = 5;
     let specificDealId: string | null = null;
+    let autoQueuePosts = true;
     
     try {
       const body = await req.json();
       batchSize = body.batchSize || 10;
       maxRetries = body.maxRetries || 5;
       specificDealId = body.dealId || null;
+      autoQueuePosts = body.autoQueuePosts !== false;
     } catch {
       // Use defaults
     }
 
-    console.log(`Starting image verification. Batch: ${batchSize}, MaxRetries: ${maxRetries}`);
+    console.log(`Starting image verification. Batch: ${batchSize}, MaxRetries: ${maxRetries}, AutoQueue: ${autoQueuePosts}`);
 
-    // Build query for deals needing verification
     let query = supabase
       .from("deals")
-      .select("id, image_url, product_url, title, image_retry_count")
+      .select("id, image_url, product_url, title, image_retry_count, brand, category, price, original_price, discount")
       .eq("image_ready", false)
       .lt("image_retry_count", maxRetries)
       .order("image_last_checked", { ascending: true, nullsFirst: true })
@@ -224,7 +359,7 @@ Deno.serve(async (req) => {
     if (specificDealId) {
       query = supabase
         .from("deals")
-        .select("id, image_url, product_url, title, image_retry_count")
+        .select("id, image_url, product_url, title, image_retry_count, brand, category, price, original_price, discount")
         .eq("id", specificDealId);
     }
 
@@ -241,7 +376,7 @@ Deno.serve(async (req) => {
     if (!deals || deals.length === 0) {
       console.log("No deals need image verification");
       return new Response(
-        JSON.stringify({ message: "No deals need verification", processed: 0, verified: 0 }),
+        JSON.stringify({ message: "No deals need verification", processed: 0, verified: 0, postsQueued: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -250,14 +385,14 @@ Deno.serve(async (req) => {
 
     let verified = 0;
     let failed = 0;
-    const results: { id: string; status: string; imageUrl?: string }[] = [];
+    let postsQueued = 0;
+    const results: { id: string; status: string; imageUrl?: string; postsQueued?: number }[] = [];
 
     for (const deal of deals) {
       const verifiedUrl = await verifyAndGetImageUrl(deal);
       const now = new Date().toISOString();
 
       if (verifiedUrl) {
-        // Update deal as image_ready
         const { error: updateError } = await supabase
           .from("deals")
           .update({
@@ -273,11 +408,18 @@ Deno.serve(async (req) => {
           results.push({ id: deal.id, status: "error" });
         } else {
           verified++;
-          results.push({ id: deal.id, status: "verified", imageUrl: verifiedUrl });
-          console.log(`✓ Deal ${deal.id} verified with image`);
+          
+          // Auto-queue social posts for verified deals
+          let dealPostsQueued = 0;
+          if (autoQueuePosts) {
+            dealPostsQueued = await queueSocialPosts(supabase, supabaseUrl, anonKey, deal);
+            postsQueued += dealPostsQueued;
+          }
+          
+          results.push({ id: deal.id, status: "verified", imageUrl: verifiedUrl, postsQueued: dealPostsQueued });
+          console.log(`✓ Deal ${deal.id} verified with image, ${dealPostsQueued} posts queued`);
         }
       } else {
-        // Increment retry count
         const { error: updateError } = await supabase
           .from("deals")
           .update({
@@ -295,7 +437,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Verification complete. Verified: ${verified}, Need retry: ${failed}`);
+    console.log(`Verification complete. Verified: ${verified}, Need retry: ${failed}, Posts queued: ${postsQueued}`);
 
     return new Response(
       JSON.stringify({
@@ -303,6 +445,7 @@ Deno.serve(async (req) => {
         processed: deals.length,
         verified,
         needRetry: failed,
+        postsQueued,
         results,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
