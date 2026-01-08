@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,8 +19,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Calendar, Clock, Check, X, RefreshCw, Copy, Trash2, CheckCheck, ClipboardList, ExternalLink } from "lucide-react";
+import { Calendar, Clock, Check, X, RefreshCw, Copy, Trash2, CheckCheck, ClipboardList, ExternalLink, Send, CalendarClock } from "lucide-react";
 import { format } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -32,6 +39,7 @@ type ScheduledPost = {
   created_at: string;
   posted_at: string | null;
   error_message: string | null;
+  scheduled_for: string | null;
 };
 
 type DealInfo = {
@@ -43,6 +51,9 @@ type DealInfo = {
 export function ScheduledPostsManager() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("pending");
+  const [schedulingPostId, setSchedulingPostId] = useState<string | null>(null);
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ["scheduled-posts", activeTab],
@@ -195,6 +206,39 @@ export function ScheduledPostsManager() {
     },
   });
 
+  const schedulePostMutation = useMutation({
+    mutationFn: async ({ postId, scheduledFor }: { postId: string; scheduledFor: string }) => {
+      const { error } = await supabase
+        .from("scheduled_posts")
+        .update({ scheduled_for: scheduledFor })
+        .eq("id", postId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["scheduled-posts"] });
+      setSchedulingPostId(null);
+      setScheduleDate("");
+      setScheduleTime("");
+      toast.success("Post scheduled!", {
+        description: "You'll be reminded to post at the scheduled time",
+      });
+    },
+    onError: (error) => {
+      toast.error("Failed to schedule", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    },
+  });
+
+  const handleSchedulePost = (postId: string) => {
+    if (!scheduleDate || !scheduleTime) {
+      toast.error("Please select date and time");
+      return;
+    }
+    const scheduledFor = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+    schedulePostMutation.mutate({ postId, scheduledFor });
+  };
+
   const copyToClipboard = (text: string, platform: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard!", {
@@ -219,6 +263,21 @@ export function ScheduledPostsManager() {
     window.open(`https://wa.me/?text=${encoded}`, '_blank');
     toast.success("Opening WhatsApp", {
       description: "Paste the post in your group",
+    });
+  };
+
+  const shareAllToWhatsApp = () => {
+    if (!posts?.length) return;
+    const whatsappPosts = posts.filter(p => p.platform === "whatsapp");
+    if (!whatsappPosts.length) {
+      toast.error("No WhatsApp posts to share");
+      return;
+    }
+    const allTexts = whatsappPosts.map((post) => post.generated_text).join('\n\n---\n\n');
+    const encoded = encodeURIComponent(allTexts);
+    window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    toast.success(`Opening WhatsApp with ${whatsappPosts.length} posts`, {
+      description: "Share all posts in your group",
     });
   };
 
@@ -273,7 +332,7 @@ export function ScheduledPostsManager() {
               <TabsTrigger value="failed">Failed</TabsTrigger>
             </TabsList>
             {activeTab === "pending" && (stats?.pending || 0) > 0 && (
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   variant="outline"
                   onClick={copyAllPosts}
@@ -281,6 +340,14 @@ export function ScheduledPostsManager() {
                 >
                   <ClipboardList className="h-4 w-4" />
                   Copy All
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={shareAllToWhatsApp}
+                  className="gap-2 bg-green-50 hover:bg-green-100 border-green-200"
+                >
+                  <Send className="h-4 w-4 text-green-600" />
+                  Share All to WhatsApp
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -338,6 +405,12 @@ export function ScheduledPostsManager() {
                               <Badge variant="outline" className="capitalize">
                                 {post.platform}
                               </Badge>
+                              {post.scheduled_for && (
+                                <Badge variant="secondary" className="gap-1">
+                                  <CalendarClock className="h-3 w-3" />
+                                  {format(new Date(post.scheduled_for), "MMM d, h:mm a")}
+                                </Badge>
+                              )}
                               <span className="text-xs text-muted-foreground">
                                 {format(new Date(post.created_at), "MMM d, h:mm a")}
                               </span>
@@ -403,21 +476,82 @@ export function ScheduledPostsManager() {
                             )}
                             
                             {activeTab === "pending" && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => markPostedMutation.mutate(post.id)}
-                                      disabled={markPostedMutation.isPending}
-                                    >
-                                      <Check className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Mark as posted</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => markPostedMutation.mutate(post.id)}
+                                        disabled={markPostedMutation.isPending}
+                                      >
+                                        <Check className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Mark as posted</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                
+                                <Popover open={schedulingPostId === post.id} onOpenChange={(open) => {
+                                  if (open) {
+                                    setSchedulingPostId(post.id);
+                                    // Set default to tomorrow at 9 AM
+                                    const tomorrow = new Date();
+                                    tomorrow.setDate(tomorrow.getDate() + 1);
+                                    setScheduleDate(format(tomorrow, 'yyyy-MM-dd'));
+                                    setScheduleTime('09:00');
+                                  } else {
+                                    setSchedulingPostId(null);
+                                  }
+                                }}>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <PopoverTrigger asChild>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className={post.scheduled_for ? "bg-purple-50 border-purple-200" : ""}
+                                          >
+                                            <CalendarClock className={`h-4 w-4 ${post.scheduled_for ? "text-purple-600" : ""}`} />
+                                          </Button>
+                                        </PopoverTrigger>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Schedule post time</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <PopoverContent className="w-72">
+                                    <div className="space-y-4">
+                                      <h4 className="font-medium">Schedule Post</h4>
+                                      <div className="space-y-2">
+                                        <Label>Date</Label>
+                                        <Input
+                                          type="date"
+                                          value={scheduleDate}
+                                          onChange={(e) => setScheduleDate(e.target.value)}
+                                          min={format(new Date(), 'yyyy-MM-dd')}
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label>Time</Label>
+                                        <Input
+                                          type="time"
+                                          value={scheduleTime}
+                                          onChange={(e) => setScheduleTime(e.target.value)}
+                                        />
+                                      </div>
+                                      <Button 
+                                        className="w-full" 
+                                        onClick={() => handleSchedulePost(post.id)}
+                                        disabled={schedulePostMutation.isPending}
+                                      >
+                                        Set Schedule
+                                      </Button>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              </>
                             )}
                             <TooltipProvider>
                               <Tooltip>
