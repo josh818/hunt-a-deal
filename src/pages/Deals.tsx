@@ -123,16 +123,26 @@ const Deals = () => {
     },
   });
 
-  // Filter deals by published categories
+  // Filter deals by published categories and valid images
   const publishedDeals = useMemo(() => {
     if (!deals) return [];
-    if (!categoryRules || categoryRules.length === 0) return deals;
+    
+    // First filter out deals without proper images
+    const dealsWithImages = deals.filter(deal => {
+      // Has a verified image URL
+      if (deal.verifiedImageUrl && deal.verifiedImageUrl.startsWith('http')) return true;
+      // Has a valid image URL (not placeholder)
+      if (deal.imageUrl && deal.imageUrl.startsWith('http') && !deal.imageUrl.includes('placeholder')) return true;
+      return false;
+    });
+    
+    if (!categoryRules || categoryRules.length === 0) return dealsWithImages;
     
     const unpublishedCategories = new Set(
       categoryRules.filter(r => !r.is_published).map(r => r.category)
     );
     
-    return deals.filter(deal => !unpublishedCategories.has(deal.category || ""));
+    return dealsWithImages.filter(deal => !unpublishedCategories.has(deal.category || ""));
   }, [deals, categoryRules]);
 
   useEffect(() => {
