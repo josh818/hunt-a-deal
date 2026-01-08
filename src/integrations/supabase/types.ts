@@ -465,6 +465,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      deal_exists: { Args: { _deal_id: string }; Returns: boolean }
       get_cron_job_runs: {
         Args: never
         Returns: {
@@ -525,6 +526,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      project_exists: { Args: { _project_id: string }; Returns: boolean }
       promote_to_admin: { Args: { target_user_id: string }; Returns: undefined }
       toggle_cron_job: {
         Args: { job_id: number; new_active: boolean }
