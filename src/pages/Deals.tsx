@@ -46,6 +46,9 @@ const fetchDeals = async (): Promise<Deal[]> => {
     inStock: item.in_stock,
     couponCode: item.coupon_code,
     fetchedAt: item.fetched_at,
+    postedAt: item.posted_at,
+    verifiedImageUrl: item.verified_image_url,
+    imageReady: item.image_ready,
   }));
 };
 
