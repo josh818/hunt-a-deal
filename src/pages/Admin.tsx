@@ -717,13 +717,13 @@ const Admin = () => {
                             <div className="flex flex-col gap-2">
                               <div className="grid grid-cols-2 gap-2">
                                 <Select
-                                  value={urlSettings[project.id]?.url_prefix ?? (project.url_prefix ?? 'project')}
+                                  value={urlSettings[project.id]?.url_prefix === '' ? '__root__' : (urlSettings[project.id]?.url_prefix ?? (project.url_prefix === '' ? '__root__' : (project.url_prefix ?? 'project')))}
                                   onValueChange={(v) =>
                                     setUrlSettings((prev) => ({
                                       ...prev,
                                       [project.id]: {
                                         custom_slug: prev[project.id]?.custom_slug ?? (project.custom_slug || ""),
-                                        url_prefix: v,
+                                        url_prefix: v === '__root__' ? '' : v,
                                         saving: prev[project.id]?.saving ?? false,
                                       },
                                     }))
@@ -736,7 +736,7 @@ const Admin = () => {
                                     <SelectItem value="project">/project</SelectItem>
                                     <SelectItem value="p">/p</SelectItem>
                                     <SelectItem value="s">/s</SelectItem>
-                                    <SelectItem value="">(root)</SelectItem>
+                                    <SelectItem value="__root__">(root)</SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <Input
